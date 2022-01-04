@@ -30,13 +30,13 @@ public class HardCode {
             case WATCHTOWER:
                 break;
             case MINER:
-                break;
+                initBFS20();
             case BUILDER:
-                break;
+                initBFS20();
             case SOLDIER:
-                break;
+                initBFS20();
             case SAGE:
-                break;
+                initBFS20();
         }
     }
 

@@ -164,6 +164,7 @@ public class Nav {
             Actions.doMove(bestDir);
         } else {
             tlog("Can't move");
+            return null;
         }
         return bestDir;
     }
@@ -193,6 +194,7 @@ public class Nav {
             Actions.doMove(bestDir);
         } else {
             tlog("Can't move");
+            return null;
         }
         return bestDir;
     }

@@ -24,5 +24,14 @@ public class Builder extends Robot {
         // put role-specific updates here
 
 
+
+        // move randomly
+        Direction randDir = DIRS[randInt(DIRS.length)];
+        for (int i = 8; --i >= 0;) {
+            if (rc.canMove(randDir)) {
+                Actions.doMove(randDir);
+            }
+            randDir = randDir.rotateLeft();
+        }
     }
 }

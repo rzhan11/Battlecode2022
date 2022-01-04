@@ -69,9 +69,7 @@ public abstract class Robot extends Constants {
 
         // initial comms
         Comms.initBaseCoords(rc.getLocation());
-        if (myType == ARCHON) {
-            Comms.writeArchonLoc(rc.getLocation());
-        } else {
+        if (myType != ARCHON) {
             Comms.readAllArchonLocs();
         }
 
@@ -108,8 +106,6 @@ public abstract class Robot extends Constants {
 
         // independent
         updateBasicInfo();
-
-
 
         printBuffer();
     }

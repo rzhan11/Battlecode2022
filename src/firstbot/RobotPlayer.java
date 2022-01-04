@@ -24,6 +24,7 @@ public strictfp class RobotPlayer {
                 firstTurn = false;
             } catch (Exception e) {
                 e.printStackTrace();
+                rc.resign();
             }
 
             try {
