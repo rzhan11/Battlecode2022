@@ -66,6 +66,7 @@ public abstract class Robot extends Constants {
 
         // init map
         Map.initMap();
+        exploreLoc = getRandomLoc();
 
         // initial comms
         Comms.initBaseCoords(rc.getLocation());
@@ -75,6 +76,7 @@ public abstract class Robot extends Constants {
 
         // init hardcode
         HardCode.initHardCode();
+
 
 
 
@@ -126,6 +128,44 @@ public abstract class Robot extends Constants {
         printMyInfo();
         printBuffer();
     }
+
+    public static MapLocation exploreLoc = null;
+    public static int attemptsSinceProgress = 0;
+
+    public static int EXPLORE_PATIENCE = 10; // number of attempts to go towards a location before giving up
+    public static int EXPLORE_DISTANCE_REQ = 9; // how close we will try to get to exploreLoc
+
+    public static void explore() throws GameActionException {
+        if (here.isWithinDistanceSquared(exploreLoc, EXPLORE_DISTANCE_REQ)) {
+            chooseNewExploreLoc();
+        }
+
+        drawLine(here, exploreLoc, MAGENTA);
+
+        Direction exploreDir = here.directionTo(exploreLoc);
+        Direction moveDir = tryMoveApprox(exploreDir);
+        if (moveDir != null) {
+            attemptsSinceProgress = 0;
+            return;
+        }
+
+        attemptsSinceProgress++;
+        if (attemptsSinceProgress > EXPLORE_PATIENCE) {
+            chooseNewExploreLoc();
+            explore();
+        }
+    }
+
+    public static void chooseNewExploreLoc() {
+        // choose new location
+        exploreLoc = getRandomLoc();
+        // make sure to choose a location that is somewhat far away
+        while (here.isWithinDistanceSquared(exploreLoc, EXPLORE_DISTANCE_REQ)) {
+            exploreLoc = getRandomLoc();
+        }
+    }
+
+
 
     /*
     Run at the end of each turn

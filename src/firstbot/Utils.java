@@ -52,6 +52,10 @@ public class Utils {
         return new MapLocation(0, 0).directionTo(new MapLocation(dx, dy));
     }
 
+    public static MapLocation getRandomLoc() {
+        return new MapLocation(randInt(rc.getMapWidth()), randInt(rc.getMapHeight()));
+    }
+
     public static Direction getRandomDir() {
         return DIRS[randInt(8)];
     }

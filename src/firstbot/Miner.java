@@ -5,8 +5,6 @@ import battlecode.common.*;
 import static firstbot.Debug.*;
 import static firstbot.Utils.*;
 
-import java.util.Random;
-
 
 public class Miner extends Robot {
     // constants
@@ -34,20 +32,23 @@ public class Miner extends Robot {
         }
 
         // mine lead if adjacent to it
-        boolean nextToLead = false;
+        boolean isNextToResource = false;
         for (int i = ALL_DIRS.length; --i >= 0;) {
             MapLocation loc = here.add(ALL_DIRS[i]);
             if (!rc.onTheMap(loc)) {
                 continue;
             }
-            if (rc.senseLead(loc) > 0) {
-                nextToLead = true;
+            if (rc.senseLead(loc) > 0 || rc.senseGold(loc) > 0) {
+                isNextToResource = true;
             }
-            while (rc.canMineLead(loc)) {
+            while (rc.canMineGold(loc)) {
+                Actions.doMineGold(loc);
+            }
+            if (rc.canMineLead(loc)) {
                 Actions.doMineLead(loc);
             }
         }
-        if (nextToLead) {
+        if (isNextToResource) {
             rc.setIndicatorString("mining");
             return;
         }
@@ -67,17 +68,20 @@ public class Miner extends Robot {
             }
         }
 
-        // move randomly
-        Direction randDir = DIRS[randInt(DIRS.length)];
-        for (int i = 8; --i >= 0;) {
-            if (rc.canMove(randDir)) {
-                Actions.doMove(randDir);
-                rc.setIndicatorString("rand moving " + randDir);
-                return;
-            }
-            randDir = randDir.rotateLeft();
-        }
+        // exploring
+        explore();
+        rc.setIndicatorString("exploring " + exploreLoc);
 
-        rc.setIndicatorString("stuck");
+        // move randomly
+//        Direction randDir = DIRS[randInt(DIRS.length)];
+//        for (int i = 8; --i >= 0;) {
+//            if (rc.canMove(randDir)) {
+//                Actions.doMove(randDir);
+//                rc.setIndicatorString("rand moving " + randDir);
+//                return;
+//            }
+//            randDir = randDir.rotateLeft();
+//        }
+
     }
 }

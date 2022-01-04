@@ -50,14 +50,18 @@ public class Soldier extends Robot {
             return;
         }
 
+
+        explore();
+        rc.setIndicatorString("exploring " + exploreLoc);
+
         // move randomly
-        Direction randDir = DIRS[randInt(DIRS.length)];
-        for (int i = 8; --i >= 0;) {
-            if (rc.canMove(randDir)) {
-                Actions.doMove(randDir);
-            }
-            randDir = randDir.rotateLeft();
-        }
+//        Direction randDir = DIRS[randInt(DIRS.length)];
+//        for (int i = 8; --i >= 0;) {
+//            if (rc.canMove(randDir)) {
+//                Actions.doMove(randDir);
+//            }
+//            randDir = randDir.rotateLeft();
+//        }
 
     }
 }
