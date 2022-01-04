@@ -41,14 +41,17 @@ public class Archon extends Robot {
 
 
         // rotate through different spawns
-        RobotType spawnType = potentialSpawns[numSpawns % 3];
-        if (rc.getTeamLeadAmount(us) >= spawnType.buildCostLead) {
-            for (int i = DIRS.length; --i >= 0;) {
-                Direction dir = DIRS[i];
-                if (rc.canBuildRobot(spawnType, dir)) {
-                    Actions.doBuildRobot(spawnType, dir);
-                    numSpawns++;
-                    return;
+        int rand = randInt(8);
+        if (rand == 0) {
+            RobotType spawnType = potentialSpawns[numSpawns % 3];
+            if (rc.getTeamLeadAmount(us) >= spawnType.buildCostLead) {
+                for (int i = DIRS.length; --i >= 0; ) {
+                    Direction dir = DIRS[i];
+                    if (rc.canBuildRobot(spawnType, dir)) {
+                        Actions.doBuildRobot(spawnType, dir);
+                        numSpawns++;
+                        return;
+                    }
                 }
             }
         }
