@@ -30,15 +30,18 @@ while index < len(lines):
                 break
             if isHeader(lines[index]):
                 # old header
-                log_ends[roundNum][id] = index
 
+                old_header = header
                 header = lines[index][:lines[index].index("]") + 1]
-                myTeam = header[header.index("[") + 1:header.index(":")]
-                myType = header[header.index(":") + 1:header.index("#")]
-                id = header[header.index("#") + 1:header.index("@")]
-                roundNum = int( header[header.index("@") + 1:header.index("]")] )
+                if old_header != header:
+                    log_ends[roundNum][id] = index
+                    
+                    myTeam = header[header.index("[") + 1:header.index(":")]
+                    myType = header[header.index(":") + 1:header.index("#")]
+                    id = header[header.index("#") + 1:header.index("@")]
+                    roundNum = int( header[header.index("@") + 1:header.index("]")] )
 
-                log_starts[roundNum][id] = index
+                    log_starts[roundNum][id] = index
 
 
             index += 1

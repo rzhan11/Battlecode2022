@@ -25,9 +25,11 @@ while True:
         if id in log_starts[round]:
             s_i = log_starts[round][id]
             e_i = log_ends[round][id]
+            print()
             for i in range(s_i, e_i):
                 print(lines[i])
             print("[----]")
+            print()
         else:
             print(f"ID '{id}' not found")
     except ValueError:
