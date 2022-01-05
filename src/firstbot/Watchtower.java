@@ -22,7 +22,14 @@ public class Watchtower extends Robot {
     // code run each turn
     public static void turn() throws GameActionException {
         // put role-specific updates here
-
+        RobotInfo[] attackableEnemies = rc.senseNearbyRobots(myActionRadius, them);
+        if (attackableEnemies.length > 0) {
+            MapLocation loc = attackableEnemies[0].location;
+            if (rc.canAttack(loc)) {
+                Actions.doAttack(loc);
+            }
+            return;
+        }
 
     }
 }

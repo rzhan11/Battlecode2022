@@ -25,13 +25,15 @@ public class Builder extends Robot {
         // put role-specific updates here
 
         // try to build random watchtower TESTING
-        Direction randDir = getRandomDir();
-        for (int i = 8; --i >= 0;) {
-            if (rc.canBuildRobot(WATCHTOWER, randDir)) {
-                Actions.doBuildRobot(WATCHTOWER, randDir);
-                return;
+        if (randInt(100000) == 0) {
+            Direction randDir = getRandomDir();
+            for (int i = 8; --i >= 0;) {
+                if (rc.canBuildRobot(WATCHTOWER, randDir)) {
+                    Actions.doBuildRobot(WATCHTOWER, randDir);
+                    return;
+                }
+                randDir = randDir.rotateLeft();
             }
-            randDir = randDir.rotateLeft();
         }
 
         // check if target building needs healing
@@ -48,8 +50,8 @@ public class Builder extends Robot {
 
         // look for buildings nearby to heal
         if (healTarget == -1) {
-            RobotInfo[] nearbyRobots = rc.senseNearbyRobots(-1, us);
-            for (int i = nearbyRobots.length - 1; --i >= 0;) {
+            RobotInfo[] nearbyRobots = rc.senseNearbyRobots(myVisionRadius, us);
+            for (int i = nearbyRobots.length; --i >= 0;) {
                 RobotInfo bot = nearbyRobots[i];
                 RobotType type = bot.getType();
                 if (type.isBuilding()) {
@@ -76,7 +78,7 @@ public class Builder extends Robot {
         }
         else {
             // move randomly
-            randDir = getRandomDir();
+            Direction randDir = getRandomDir();
             for (int i = 8; --i >= 0;) {
                 if (rc.canMove(randDir)) {
                     Actions.doMove(randDir);

@@ -42,7 +42,7 @@ public class Soldier extends Robot {
 
         // if enemies are visible, but too far, chase
         // should automatically target the closest one
-        RobotInfo[] seenEnemies = rc.senseNearbyRobots(myActionRadius, them);
+        RobotInfo[] seenEnemies = rc.senseNearbyRobots(myVisionRadius, them);
         if (seenEnemies.length > 0) {
             MapLocation targetLoc = seenEnemies[0].location;
             Direction moveDir = Nav.fuzzyTo(targetLoc);
