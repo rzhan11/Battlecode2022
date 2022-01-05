@@ -1,3 +1,7 @@
+
+src/*_nolog
+uploads/
+
 dist/*
 build/*
 
