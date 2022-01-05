@@ -3,9 +3,7 @@ package firstbot;
 import battlecode.common.*;
 import static battlecode.common.RobotType.*;
 
-import static firstbot.Comms.*;
 import static firstbot.Debug.*;
-import static firstbot.Map.*;
 import static firstbot.Nav.*;
 import static firstbot.Utils.*;
 
@@ -69,9 +67,8 @@ public abstract class Robot extends Constants {
         exploreLoc = getRandomLoc();
 
         // initial comms
-        Comms.initBaseCoords(rc.getLocation());
         if (myType != ARCHON) {
-            Comms.readAllArchonLocs();
+            NewsComms.readAllArchonLocs();
         }
 
         // init hardcode
@@ -102,12 +99,15 @@ public abstract class Robot extends Constants {
 
     public static void updateTurnInfo() throws GameActionException {
 
-        // comms things for every turn
-//        CommManager.resetFlag();
-//        Comms.resetPrevEcho();
-
         // independent
         updateBasicInfo();
+
+        // comms
+        Comms.loadCommArray();
+        MsgComms.loadMessageArray();
+
+
+
 
         printBuffer();
     }

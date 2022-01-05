@@ -3,6 +3,9 @@ package firstbot;
 import battlecode.common.*;
 import static battlecode.common.RobotType.*;
 
+import static firstbot.Comms.*;
+import static firstbot.MsgComms.*;
+import static firstbot.NewsComms.*;
 import static firstbot.Debug.*;
 import static firstbot.Utils.*;
 
@@ -19,7 +22,7 @@ public class Archon extends Robot {
     public static void firstTurnSetup() throws GameActionException {
         // first turn comms
         // Comms.writeXBounds();
-        Comms.writeArchonLoc(here);
+//        NewsComms.writeArchonLoc(here);
 
 
     }
@@ -33,11 +36,20 @@ public class Archon extends Robot {
 
         // second turn update
         if (roundNum == 2) {
-            Comms.readAllArchonLocs();
-            for (int i = myArchonLocs.length; --i >= 0;) {
-                log(i + ": " + myArchonLocs[i].toString());
-            }
+//            NewsComms.readAllArchonLocs();
+//            for (int i = myArchonLocs.length; --i >= 0;) {
+//                log(i + ": " + myArchonLocs[i].toString());
+//            }
         }
+
+        log("REPORT4 " + messageArray[4].toString());
+
+        writeReportEnemy(new MapLocation(7, 17));
+
+//        if (myID == 5) {
+//            printBuffer();
+//            rc.resign();
+//        }
 
         if (!rc.isActionReady()) {
             return;

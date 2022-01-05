@@ -23,6 +23,7 @@ public strictfp class RobotPlayer {
                 turn();
                 firstTurn = false;
             } catch (Exception e) {
+                printBuffer();
                 e.printStackTrace();
                 rc.resign();
             }
@@ -30,6 +31,7 @@ public strictfp class RobotPlayer {
             try {
                 endTurn();
             } catch(Exception e) {
+                printBuffer();
                 e.printStackTrace();
             }
         }
