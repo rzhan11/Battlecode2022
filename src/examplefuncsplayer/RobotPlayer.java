@@ -128,6 +128,11 @@ public strictfp class RobotPlayer {
      * This code is wrapped inside the infinite loop in run(), so it is called once per turn.
      */
     static void runMiner(RobotController rc) throws GameActionException {
+        MapLocation loc = new MapLocation(4, 3);
+        if (rc.canSenseLocation(loc)) {
+            rc.setIndicatorString("sensed " + rc.senseLead(loc) + "@" + loc);
+        }
+
         // Try to mine on squares around us.
         MapLocation me = rc.getLocation();
         for (int dx = -1; dx <= 1; dx++) {

@@ -2,6 +2,8 @@ package firstbot;
 
 import battlecode.common.*;
 
+import static battlecode.common.RobotType.*;
+
 import static firstbot.Debug.*;
 import static firstbot.Robot.*;
 
@@ -39,26 +41,20 @@ public class Comms {
     /*
     Comms OVERVIEW:
     -----
-    Our COMMS array is divided into a NEWS section and MESSAGE section.
+    Our COMMS array is divided into preset sections.
 
-    NEWS section has preset types of news at locations.
-        - news can be updated each turn
+    1 cell = 16 bits (an array entry)
+    1 message per cell (messages are 15 content bits + 1 header bit)
+        - header bit indicates that the message is being used
+        - content bits are bits 0-14
+        - header bit is bit 15
+    Sections are intervals of cells
 
-    MESSAGE section can contain many types of messages
-        - contains many types of messages
-        - messages contain a header (indicating type of message) and content section (indicating details about message)
-            - example: A message header could indicate "FOUND_ENEMY" and the message content section contains 12 bits representing MapLocation of enemy
-        - dynamic message size is 18 bits
-            - message header size will be 6 bits (for 64 message types)
-            - message content size will be 12 bits (to fit a MapLocation)
+    A cell containing 0 indicates that there is no message in it
+        - Our messages should ever be 0
+        - Messages should contain some "used" bit to show that a cell is nonempty
 
-    IMPORTANT:
-        - messages can only be sent on odd turns (allowing all units to read them on even turns)
-        - archons will clear message board at the start of odd turns
 
-    Potential todos:
-        - create MessageQueue for units, to hold messages
-        - priority messages (and a way to recover/resend overwritten messages)
     -----
     */
 
@@ -71,9 +67,6 @@ public class Comms {
         - Flag section (1x16)
         - todo: unit counts
 
-    Dynamic section:
-        - remaining 55 x 16 = 880 bits
-        - 880 / 18 = 48 dynamic messages
      */
 
     final public static int COMM_ARRAY_SIZE = 64;
@@ -89,41 +82,6 @@ public class Comms {
         int aft = Clock.getBytecodesLeft();
     }
 
-    final public static int CELL_FULL_MASK = (1 << 16) - 1;
-    final public static int CELL_RIGHT_MASK = (1 << 8) - 1;
-    final public static int CELL_LEFT_MASK = CELL_RIGHT_MASK << 8;
-
-    /*
-    Requires startBit % 8 == 0
-     */
-    public static int read24BitsFromIndex(int startBit) {
-        int leftCellIndex = startBit / COMM_CELL_BITS;
-
-        if (startBit % 16 == 0) { // left full + right half
-            return commArray[leftCellIndex] + ((commArray[leftCellIndex + 1] & CELL_RIGHT_MASK) << 16);
-        } else { // left half + right full
-            return ((commArray[leftCellIndex] & CELL_LEFT_MASK) >>> 8) + (commArray[leftCellIndex + 1] << 8);
-        }
-    }
-
-    public static void write24BitsToIndex(int data, int startBit) throws GameActionException {
-        int leftCellIndex = startBit / COMM_CELL_BITS;
-        int rightCellIndex = leftCellIndex + 1;
-        if (startBit % 16 == 0) { // left full + right half
-            int leftData = data & CELL_FULL_MASK;
-            int rightData = data >>> 16;
-            commArray[leftCellIndex] = leftData;
-            commArray[rightCellIndex] = setBits(commArray[rightCellIndex], rightData, 0, 8);
-        } else { // left half + right full
-            int leftData = data & CELL_RIGHT_MASK;
-            int rightData = data >>> 8;
-            commArray[leftCellIndex] = setBits(commArray[rightCellIndex], leftData, 8, 16);
-            commArray[rightCellIndex] = rightData;
-        }
-        rc.writeSharedArray(leftCellIndex, commArray[leftCellIndex]);
-        rc.writeSharedArray(rightCellIndex, commArray[rightCellIndex]);
-    }
-
     public static int getBitMask(int left, int right) {
         return ((1 << (right - left)) - 1) << left;
     }
@@ -137,5 +95,128 @@ public class Comms {
 
     public static int getBits(int origData, int left, int right) {
         return origData & getBitMask(left, right);
+    }
+
+    final public static int ALLY_ARCHON_SECTION_ID = 0;
+    final public static int ALLY_ARCHON_SECTION_OFFSET = 0;
+    final public static int ALLY_ARCHON_SECTION_SIZE = 4; // num cells
+
+    final public static int ENEMY_ARCHON_SECTION_ID = 1;
+    final public static int ENEMY_ARCHON_SECTION_OFFSET = ALLY_ARCHON_SECTION_OFFSET + ALLY_ARCHON_SECTION_SIZE;
+    final public static int ENEMY_ARCHON_SECTION_SIZE = 4;
+
+    final public static int FLAG_SECTION_ID = 2;
+    final public static int FLAG_SECTION_OFFSET = ENEMY_ARCHON_SECTION_OFFSET + ENEMY_ARCHON_SECTION_SIZE;
+    final public static int FLAG_SECTION_SIZE = 1;
+
+    final public static int REPORT_RESOURCE_SECTION_ID = 3;
+    final public static int REPORT_RESOURCE_OFFSET = FLAG_SECTION_OFFSET + FLAG_SECTION_SIZE;
+    final public static int REPORT_RESOURCE_SIZE = 16;
+
+    final public static int REPORT_ENEMY_SECTION_ID = 4;
+    final public static int REPORT_ENEMY_OFFSET = REPORT_RESOURCE_OFFSET + REPORT_RESOURCE_SIZE;
+    final public static int REPORT_ENEMY_SIZE = 16;
+
+    /*
+    Write a message to an empty cell in a given section
+    ---
+    Returns index of cell written to
+    Returns -1 if no empty cell found
+     */
+    public static int writeToEmptyCell(int data, int sectionOffset, int sectionSize) throws GameActionException {
+        int cellIndex = findEmptyCell(sectionOffset, sectionSize);
+        if (cellIndex != -1) {
+            writeToCell(data, cellIndex);
+        } else {
+            tlog("Write fail " + sectionOffset + " " +sectionSize);
+        }
+
+        return cellIndex;
+    }
+
+    public static int findEmptyCell(int sectionOffset, int sectionSize) throws GameActionException {
+        int sectionEnd = sectionOffset + sectionSize;
+        for (int i = sectionOffset; i < sectionEnd; i++) {
+            if (commArray[i] == 0) { // write into empty location
+                return i;
+            }
+        }
+        return -1;
+    }
+
+    public static void writeToCell(int data, int cellIndex) throws GameActionException {
+        tlog("Write success");
+        data += 1 << 15; // used bit
+
+        commArray[cellIndex] = data;
+        rc.writeSharedArray(cellIndex, data);
+    }
+
+    public static void readMessageSection(int sectionID, int sectionOffset, int sectionSize) throws GameActionException {
+        for (int i = sectionSize; --i >= 0;) {
+            readMessage(sectionID, i, i + sectionOffset);
+        }
+    }
+
+    public static void readMessage(int sectionID, int msgIndex, int cellIndex) throws GameActionException {
+        int msgInfo = commArray[cellIndex]; // relative index within a section
+        if (msgInfo == 0) { // empty message
+            return;
+        }
+        switch (sectionID) {
+            case ALLY_ARCHON_SECTION_ID:
+                readAllyArchonLoc(msgInfo, msgIndex);
+                break;
+
+            default:
+                logi("ERROR: Unknown sectionID " + sectionID);
+                break;
+        }
+
+
+    }
+
+    /*
+    Format:
+    Bits:
+    0-11 = Location
+    12 = Turn parity
+    13 = Live
+     */
+    public static void writeAllyArchonLoc(MapLocation loc, int archonIndex, boolean live) throws GameActionException {
+        log("Writing 'Ally Archon Loc' message " + loc + " " + archonIndex + " " + live);
+
+        int msg = loc2bits(loc);
+        if (myID != 3 && roundNum % 2 == 1) {
+            msg += 1 << 12; // initial turn parity (should be odd)
+        }
+        if (live) {
+            msg += 1 << 13; // live
+        }
+
+        writeToCell(msg, ALLY_ARCHON_SECTION_OFFSET + archonIndex);
+    }
+
+    public static void readAllyArchonLoc(int msgInfo, int archonIndex) throws GameActionException {
+        // location
+        allyArchonLocs[archonIndex] = bits2loc(msgInfo & LOC_MASK);
+
+        // live
+        int liveBit = (msgInfo >> 13) & 1;
+        isAllyArchonLive[archonIndex] = (liveBit == 1);
+
+        // turn parity
+        if (isAllyArchonLive[archonIndex] && myType == ARCHON) {
+            int tpBit = (msgInfo >> 12) & 1;
+            // if tp is off, then bot is dead
+            if (tpBit % 2 != roundNum % 2) {
+                // signal dead
+                writeAllyArchonLoc(allyArchonLocs[archonIndex], archonIndex, false);
+            }
+        }
+    }
+
+    public static void readAllAllyArchonLocs() throws GameActionException {
+        readMessageSection(ALLY_ARCHON_SECTION_ID, ALLY_ARCHON_SECTION_OFFSET, ALLY_ARCHON_SECTION_SIZE);
     }
 }

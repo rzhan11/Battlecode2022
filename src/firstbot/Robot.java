@@ -3,6 +3,8 @@ package firstbot;
 import battlecode.common.*;
 import static battlecode.common.RobotType.*;
 
+import static firstbot.Comms.ALLY_ARCHON_SECTION_OFFSET;
+import static firstbot.Comms.ALLY_ARCHON_SECTION_SIZE;
 import static firstbot.Debug.*;
 import static firstbot.Nav.*;
 import static firstbot.Utils.*;
@@ -66,13 +68,9 @@ public abstract class Robot extends Constants {
         Map.initMap();
         exploreLoc = getRandomLoc();
 
-        // initial comms
-        if (myType != ARCHON) {
-            NewsComms.readAllArchonLocs();
-        }
-
         // init hardcode
         HardCode.initHardCode();
+
 
 
 
@@ -91,7 +89,8 @@ public abstract class Robot extends Constants {
 
     // turn-dependent stats of my robot/game state
 
-    public static MapLocation[] myArchonLocs;
+    public static MapLocation[] allyArchonLocs = new MapLocation[MAX_ARCHONS];
+    public static boolean[] isAllyArchonLive = new boolean[MAX_ARCHONS];
 
     // public static double myPassability;
     // public static int myInfluence;
@@ -104,7 +103,15 @@ public abstract class Robot extends Constants {
 
         // comms
         Comms.loadCommArray();
-        MsgComms.loadMessageArray();
+
+        if (myType == ARCHON) {
+            // init comms
+            if (roundNum == spawnRound) {
+                Archon.myArchonIndex = Comms.findEmptyCell(ALLY_ARCHON_SECTION_OFFSET, ALLY_ARCHON_SECTION_SIZE);
+            }
+            Comms.writeAllyArchonLoc(here, Archon.myArchonIndex, true);
+        }
+        Comms.readAllAllyArchonLocs();
 
 
 
@@ -159,6 +166,7 @@ public abstract class Robot extends Constants {
     public static void chooseNewExploreLoc() {
         // choose new location
         exploreLoc = getRandomLoc();
+        attemptsSinceProgress = 0;
         // make sure to choose a location that is somewhat far away
         while (here.isWithinDistanceSquared(exploreLoc, EXPLORE_DISTANCE_REQ)) {
             exploreLoc = getRandomLoc();

@@ -54,6 +54,17 @@ public class Miner extends Robot {
         }
 
 
+        {
+            MapLocation loc = new MapLocation(4, 2);
+            if (rc.canSenseLocation(loc)) {
+                rc.setIndicatorString("sensed " + rc.senseLead(loc) + "@" + loc);
+                log("sensed " + rc.senseLead(loc) + "@" + loc);
+                if (roundNum == 649) {
+                    return;
+                }
+            }
+        }
+
         // search surrounding tiles for lead
         for (int[] diff: HardCode.BFS20) {
             MapLocation loc = here.translate(diff[0], diff[1]);

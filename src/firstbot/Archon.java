@@ -4,8 +4,6 @@ import battlecode.common.*;
 import static battlecode.common.RobotType.*;
 
 import static firstbot.Comms.*;
-import static firstbot.MsgComms.*;
-import static firstbot.NewsComms.*;
 import static firstbot.Debug.*;
 import static firstbot.Utils.*;
 
@@ -21,35 +19,26 @@ public class Archon extends Robot {
     // things to do on turn 1 of existence
     public static void firstTurnSetup() throws GameActionException {
         // first turn comms
-        // Comms.writeXBounds();
-//        NewsComms.writeArchonLoc(here);
-
-
     }
 
     public static RobotType[] potentialSpawns = new RobotType[]{MINER, BUILDER, SOLDIER};
     public static int numSpawns = 0;
+    public static int myArchonIndex = -1;
 
     // code run each turn
     public static void turn() throws GameActionException {
         // put role-specific updates here
 
         // second turn update
-        if (roundNum == 2) {
-//            NewsComms.readAllArchonLocs();
-//            for (int i = myArchonLocs.length; --i >= 0;) {
-//                log(i + ": " + myArchonLocs[i].toString());
-//            }
+
+        for (int i = 0; i < 4; i++) {
+            log("i " + i + ": " + allyArchonLocs[i]);
         }
 
-        log("REPORT4 " + messageArray[4].toString());
-
-        writeReportEnemy(new MapLocation(7, 17));
-
-//        if (myID == 5) {
-//            printBuffer();
-//            rc.resign();
-//        }
+        if (myID == 5) {
+            printBuffer();
+            rc.resign();
+        }
 
         if (!rc.isActionReady()) {
             return;
