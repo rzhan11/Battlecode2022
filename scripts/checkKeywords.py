@@ -15,6 +15,7 @@ print("log.txt has", len(lines), "lines")
 def isHeader(line):
     return all(c in line for c in "[:#@]")
 
+maxBytecodeByUnit = {}
 
 index = 0
 while index < len(lines):
@@ -34,6 +35,14 @@ while index < len(lines):
                 id = header[header.index("#") + 1:header.index("@")]
                 roundNum = header[header.index("@") + 1:header.index("]")]
 
+            if "Bytecode left" in lines[index]:
+                bytecodeLeft = int(lines[index][lines[index].index(":") + 2:])
+                if myType not in maxBytecodeByUnit:
+                    maxBytecodeByUnit[myType] = (bytecodeLeft, myTeam, id, roundNum, header)
+                else:
+                    if bytecodeLeft < maxBytecodeByUnit[myType][0]:
+                        maxBytecodeByUnit[myType] = (bytecodeLeft, myTeam, id, roundNum, header)
+
             for k in keywords:
                 if k in lines[index]:
                     temp = (k, myType, myTeam)
@@ -48,3 +57,7 @@ while index < len(lines):
                     print("\t\troundNum:", roundNum)
             index += 1
     index += 1
+
+print("\nMIN BYTECODES LEFT:")
+for unitType, unitInfo in maxBytecodeByUnit.items():
+    print(unitType, unitInfo[0], unitInfo[4])

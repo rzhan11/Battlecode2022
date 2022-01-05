@@ -10,6 +10,7 @@ with open("logs/log.txt") as f:
 
 while True:
     try:
+        print()
         print("Type 'q' to end")
         rin = input("Round: ")
         round = int( rin )
