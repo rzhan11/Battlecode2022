@@ -32,11 +32,15 @@ public class Archon extends Robot {
         // put role-specific updates here
 
         // second turn update
-        if (roundNum == 1) {
+        if (roundNum == 2) {
             Comms.readAllArchonLocs();
             for (int i = myArchonLocs.length; --i >= 0;) {
                 log(i + ": " + myArchonLocs[i].toString());
             }
+        }
+
+        if (!rc.isActionReady()) {
+            return;
         }
 
 
@@ -47,7 +51,11 @@ public class Archon extends Robot {
             if (rc.getTeamLeadAmount(us) >= spawnType.buildCostLead) {
                 for (int i = DIRS.length; --i >= 0; ) {
                     Direction dir = DIRS[i];
-                    if (rc.canBuildRobot(spawnType, dir)) {
+                    MapLocation loc = here.add(dir);
+                    if (!rc.onTheMap(loc)) {
+                        continue;
+                    }
+                    if (!rc.canSenseRobotAtLocation(loc)) {
                         Actions.doBuildRobot(spawnType, dir);
                         numSpawns++;
                         return;
@@ -56,6 +64,17 @@ public class Archon extends Robot {
             }
         }
 
-
+        // do heals if idle
+        RobotInfo[] actionableAllyRobots = rc.senseNearbyRobots(myActionRadius, us);
+        for (int i = actionableAllyRobots.length; --i >= 0;) {
+            RobotInfo ri = actionableAllyRobots[i];
+            if (ri.type.isBuilding()) {
+                continue;
+            }
+            if (ri.health < ri.type.getMaxHealth(ri.level)) {
+                Actions.doRepair(ri.location);
+                return;
+            }
+        }
     }
 }

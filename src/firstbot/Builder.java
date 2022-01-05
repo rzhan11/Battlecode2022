@@ -25,10 +25,11 @@ public class Builder extends Robot {
         // put role-specific updates here
 
         // try to build random watchtower TESTING
-        Direction randDir = DIRS[randInt(DIRS.length)];
+        Direction randDir = getRandomDir();
         for (int i = 8; --i >= 0;) {
             if (rc.canBuildRobot(WATCHTOWER, randDir)) {
                 Actions.doBuildRobot(WATCHTOWER, randDir);
+                return;
             }
             randDir = randDir.rotateLeft();
         }
@@ -51,7 +52,7 @@ public class Builder extends Robot {
             for (int i = nearbyRobots.length - 1; --i >= 0;) {
                 RobotInfo bot = nearbyRobots[i];
                 RobotType type = bot.getType();
-                if (type == ARCHON || type == WATCHTOWER || type == LABORATORY) {
+                if (type.isBuilding()) {
                     if (bot.health < type.getMaxHealth(bot.level)) {
                         healTarget = bot.ID;
                         target = bot;
@@ -62,26 +63,24 @@ public class Builder extends Robot {
 
         // heal building if needed
 
-        if (healTarget > 0) {
+        if (healTarget >= 0) {
             if (rc.canRepair(target.location)) {
                 Actions.doRepair(target.location);
+                return;
             }
             else {
-                MapLocation here = rc.getLocation();
-                MapLocation there = target.location;
-
-                Direction d = here.directionTo(there);
-                if (rc.canMove(d)) {
-                    Actions.doMove(d);
-                }
+                Direction targetDir = here.directionTo(target.location);
+                Direction moveDir = Nav.tryMoveApprox(targetDir);
+                return;
             }
         }
         else {
             // move randomly
-            randDir = DIRS[randInt(DIRS.length)];
+            randDir = getRandomDir();
             for (int i = 8; --i >= 0;) {
                 if (rc.canMove(randDir)) {
                     Actions.doMove(randDir);
+                    return;
                 }
                 randDir = randDir.rotateLeft();
             }

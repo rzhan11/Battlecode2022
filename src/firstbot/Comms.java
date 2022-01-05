@@ -10,7 +10,7 @@ import static firstbot.Map.*;
 public class Comms {
 
     // constants for coordinates
-    final public static int COORD_BITS = 7;
+    final public static int COORD_BITS = 6;
     final public static int COORD_MASK = (1 << COORD_BITS) - 1;
 
     // used in determining MapLocations with 7 bits

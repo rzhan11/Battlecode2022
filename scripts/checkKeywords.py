@@ -7,7 +7,7 @@ with open("keywords.txt") as file:
 
 print("keywords:", str(keywords))
 
-with open("log.txt", "r") as file:
+with open("logs/log.txt", "r") as file:
     lines = file.read().split("\n")
 print("log.txt has", len(lines), "lines")
 
