@@ -21,7 +21,7 @@ public class Archon extends Robot {
         // first turn comms
     }
 
-    public static RobotType[] potentialSpawns = new RobotType[]{MINER, BUILDER, SOLDIER};
+    public static RobotType[] potentialSpawns = new RobotType[]{MINER, SOLDIER, BUILDER};
     public static int numSpawns = 0;
     public static int myArchonIndex = -1;
 
@@ -46,8 +46,9 @@ public class Archon extends Robot {
 
 
         // rotate through different spawns
-        if (randInt(5) == 0) {
-            RobotType spawnType = potentialSpawns[numSpawns % 3];
+        if (roundNum % rc.getArchonCount() == myArchonIndex % rc.getArchonCount()) {
+        // only spawn miner and soldier
+            RobotType spawnType = potentialSpawns[numSpawns % 2];
             if (rc.getTeamLeadAmount(us) >= spawnType.buildCostLead) {
                 for (int i = DIRS.length; --i >= 0; ) {
                     Direction dir = DIRS[i];

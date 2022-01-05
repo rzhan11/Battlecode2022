@@ -110,6 +110,7 @@ public abstract class Robot extends Constants {
         // load comms
         Comms.loadCommArray();
 
+        // archon comm updates
         if (myType == ARCHON) {
             // archon location comms
             if (roundNum == spawnRound) { // init
@@ -125,6 +126,7 @@ public abstract class Robot extends Constants {
                 }
             }
         }
+
         Comms.readAllyArchonSection();
 
         // report enemies

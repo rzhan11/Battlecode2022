@@ -19,6 +19,10 @@ public class Miner extends Robot {
         // first turn comms
         // Comms.writeXBounds();
 
+        if (roundNum > 50) {
+            endTurn();
+            updateTurnInfo();
+        }
 
     }
 
@@ -27,43 +31,17 @@ public class Miner extends Robot {
         // put role-specific updates here
 
 
-        if (rc.getMovementCooldownTurns() > 0) {
+        if (!rc.isMovementReady() || !rc.isActionReady()) {
             return;
         }
 
-        // mine lead if adjacent to it
-        boolean isNextToResource = false;
-        for (int i = ALL_DIRS.length; --i >= 0;) {
-            MapLocation loc = here.add(ALL_DIRS[i]);
-            if (!rc.onTheMap(loc)) {
-                continue;
-            }
-            if (rc.senseLead(loc) > 0 || rc.senseGold(loc) > 0) {
-                isNextToResource = true;
-            }
-            while (rc.canMineGold(loc)) {
-                Actions.doMineGold(loc);
-            }
-            if (rc.canMineLead(loc)) {
-                Actions.doMineLead(loc);
-            }
-        }
-        if (isNextToResource) {
-            rc.setIndicatorString("mining");
-            return;
-        }
+        tryMine();
+        moveLogic();
+        tryMine();
+    }
 
-
-        {
-            MapLocation loc = new MapLocation(4, 2);
-            if (rc.canSenseLocation(loc)) {
-                rc.setIndicatorString("sensed " + rc.senseLead(loc) + "@" + loc);
-                log("sensed " + rc.senseLead(loc) + "@" + loc);
-                if (roundNum == 649) {
-                    return;
-                }
-            }
-        }
+    public static void moveLogic() throws GameActionException {
+        // look for better spot to move
 
         // search surrounding tiles for lead
         for (int[] diff: HardCode.BFS20) {
@@ -71,7 +49,7 @@ public class Miner extends Robot {
             if (!rc.onTheMap(loc)) {
                 continue;
             }
-            if (rc.senseLead(loc) > 0) {
+            if (rc.senseLead(loc) > 1) {
                 Direction moveDir = Nav.fuzzyTo(loc);
                 rc.setIndicatorString("going to " + moveDir + " " + loc);
                 Debug.drawLine(here, loc, RED);
@@ -82,17 +60,38 @@ public class Miner extends Robot {
         // exploring
         explore();
         rc.setIndicatorString("exploring " + exploreLoc);
+    }
 
-        // move randomly
-//        Direction randDir = DIRS[randInt(DIRS.length)];
-//        for (int i = 8; --i >= 0;) {
-//            if (rc.canMove(randDir)) {
-//                Actions.doMove(randDir);
-//                rc.setIndicatorString("rand moving " + randDir);
-//                return;
-//            }
-//            randDir = randDir.rotateLeft();
-//        }
+    public static void tryMine() throws GameActionException {
+        // mine lead if adjacent to it
+        for (int i = ALL_DIRS.length; --i >= 0;) {
+            MapLocation loc = here.add(ALL_DIRS[i]);
+            if (!rc.onTheMap(loc)) {
+                continue;
+            }
+            int curGold = rc.senseGold(loc);
+            while (curGold > 0) {
+                if (!rc.isActionReady()) {
+                    return;
+                }
+                Actions.doMineGold(loc);
+                curGold--;
+            }
+        }
 
+        for (int i = ALL_DIRS.length; --i >= 0;) {
+            MapLocation loc = here.add(ALL_DIRS[i]);
+            if (!rc.onTheMap(loc)) {
+                continue;
+            }
+            int curLead = rc.senseLead(loc);
+            while (curLead > 1) {
+                if (!rc.isActionReady()) {
+                    return;
+                }
+                Actions.doMineLead(loc);
+                curLead--;
+            }
+        }
     }
 }

@@ -27,6 +27,7 @@ public class Soldier extends Robot {
         // put role-specific updates here
         Comms.readReportEnemySection();
 
+
         // skip turn, if cooldown is too high
         if (rc.getMovementCooldownTurns() > 0) {
             return;

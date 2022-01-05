@@ -141,9 +141,9 @@ public class Comms {
     Returns -1 if no empty cell found
      */
     public static int writeToEmptyCell(int data, int sectionOffset, int sectionSize) throws GameActionException {
-        int cellIndex = findEmptyCell(sectionOffset, sectionSize);
+        int cellIndex = findEmptyCellWithoutDups(data, sectionOffset, sectionSize);
         if (cellIndex != -1) {
-            writeToCell(data, cellIndex);
+            writeCell(data, cellIndex);
         } else {
             tlog("Write fail " + sectionOffset + " " +sectionSize);
         }
@@ -154,19 +154,44 @@ public class Comms {
     public static int findEmptyCell(int sectionOffset, int sectionSize) throws GameActionException {
         int sectionEnd = sectionOffset + sectionSize;
         for (int i = sectionOffset; i < sectionEnd; i++) {
-            if (commArray[i] == 0) { // write into empty location
+            if (readCell(i) < 0) { // write into empty location
                 return i;
             }
         }
         return -1;
     }
 
-    public static void writeToCell(int data, int cellIndex) throws GameActionException {
-        tlog("Write success");
+    public static int findEmptyCellWithoutDups(int data, int sectionOffset, int sectionSize) throws GameActionException {
+        int sectionEnd = sectionOffset + sectionSize;
+        for (int i = sectionOffset; i < sectionEnd; i++) {
+            if (readCell(i) < 0) { // write into empty location
+                return i;
+            }
+
+            if (readCell(i) == data) {
+                tlog("Dup found at " + i);
+                return -1;
+            }
+        }
+        return -1;
+    }
+
+    /*
+    Writes message to cell
+     */
+    public static void writeCell(int data, int cellIndex) throws GameActionException {
+        tlog("Write success " + cellIndex + " " + data);
         data += 1 << 15; // used bit
 
         commArray[cellIndex] = data;
         rc.writeSharedArray(cellIndex, data);
+    }
+
+    /*
+    Returns message from cell
+     */
+    public static int readCell(int cellIndex) throws GameActionException {
+        return commArray[cellIndex] - (1 << 15);
     }
 
     public static void readMessageSection(int sectionID, int sectionOffset, int sectionSize) throws GameActionException {
@@ -259,7 +284,7 @@ public class Comms {
             msg += 1 << 13; // live
         }
 
-        writeToCell(msg, ALLY_ARCHON_SECTION_OFFSET + archonIndex);
+        writeCell(msg, ALLY_ARCHON_SECTION_OFFSET + archonIndex);
     }
 
     public static void readAllyArchon(int msgInfo, int archonIndex) throws GameActionException {
