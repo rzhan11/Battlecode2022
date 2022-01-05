@@ -11,6 +11,12 @@ import static firstbot.Utils.*;
 
 public class Comms {
 
+    /*
+    How to make a new message
+    1. Add a "read" and "write" method
+    2. Add it to the switch statement in 'readMessage()'
+     */
+
     /* COMMS HELPERS */
 
     // constants for coordinates
