@@ -3,8 +3,7 @@ package firstbot;
 import battlecode.common.*;
 import static battlecode.common.RobotType.*;
 
-import static firstbot.Comms.ALLY_ARCHON_SECTION_OFFSET;
-import static firstbot.Comms.ALLY_ARCHON_SECTION_SIZE;
+import static firstbot.Comms.*;
 import static firstbot.Debug.*;
 import static firstbot.Nav.*;
 import static firstbot.Utils.*;
@@ -71,6 +70,8 @@ public abstract class Robot extends Constants {
         // init hardcode
         HardCode.initHardCode();
 
+        // init comms
+//        Section.initSections();
 
 
 
@@ -87,6 +88,11 @@ public abstract class Robot extends Constants {
     public static int roundNum;
     public static int age;
 
+    public static RobotInfo[] sensedRobots;
+    public static RobotInfo[] sensedAllies;
+    public static RobotInfo[] sensedEnemies;
+    public static RobotInfo[] sensedNeutrals;
+
     // turn-dependent stats of my robot/game state
 
     public static MapLocation[] allyArchonLocs = new MapLocation[MAX_ARCHONS];
@@ -101,19 +107,28 @@ public abstract class Robot extends Constants {
         // independent
         updateBasicInfo();
 
-        // comms
+        // load comms
         Comms.loadCommArray();
 
         if (myType == ARCHON) {
-            // init comms
-            if (roundNum == spawnRound) {
+            // archon location comms
+            if (roundNum == spawnRound) { // init
                 Archon.myArchonIndex = Comms.findEmptyCell(ALLY_ARCHON_SECTION_OFFSET, ALLY_ARCHON_SECTION_SIZE);
             }
-            Comms.writeAllyArchonLoc(here, Archon.myArchonIndex, true);
+            Comms.writeAllyArchon(here, Archon.myArchonIndex, true);
+
+
+            // clear message board on odd rounds
+            if (roundNum != spawnRound) {
+                if (roundNum % 2 == 1 && Archon.isPrimaryArchon()) {
+                    Comms.clearMessageBoard();
+                }
+            }
         }
-        Comms.readAllAllyArchonLocs();
+        Comms.readAllyArchonSection();
 
-
+        // report enemies
+        reportSensedEnemies();
 
 
         printBuffer();
@@ -130,10 +145,24 @@ public abstract class Robot extends Constants {
         // update simple variables here
         // myPassability = rc.sensePassability(here);
 
+        sensedRobots = rc.senseNearbyRobots();
+        sensedAllies = rc.senseNearbyRobots(-1, us);
+        sensedEnemies = rc.senseNearbyRobots(-1, them);
+        sensedNeutrals = rc.senseNearbyRobots(-1, neutral);
+
 
         // print basic info
         printMyInfo();
         printBuffer();
+    }
+
+    public static void reportSensedEnemies() throws GameActionException {
+        // report one sensed enemy
+        if (sensedEnemies.length > 0) {
+            RobotInfo ri = sensedEnemies[0];
+            Comms.writeReportEnemy(ri.location, ri.type);
+        }
+
     }
 
     public static MapLocation exploreLoc = null;
@@ -147,7 +176,7 @@ public abstract class Robot extends Constants {
             chooseNewExploreLoc();
         }
 
-        drawLine(here, exploreLoc, MAGENTA);
+        drawLine(here, exploreLoc, WHITE);
 
         Direction exploreDir = here.directionTo(exploreLoc);
         Direction moveDir = tryMoveApprox(exploreDir);

@@ -2,6 +2,7 @@ package firstbot;
 
 import battlecode.common.*;
 
+import static firstbot.Debug.*;
 import static firstbot.Utils.*;
 
 public class Soldier extends Robot {
@@ -19,10 +20,12 @@ public class Soldier extends Robot {
 
     }
 
+    public static MapLocation targetEnemyLoc = null;
+
     // code run each turn
     public static void turn() throws GameActionException {
         // put role-specific updates here
-
+        Comms.readReportEnemySection();
 
         // skip turn, if cooldown is too high
         if (rc.getMovementCooldownTurns() > 0) {
@@ -42,14 +45,33 @@ public class Soldier extends Robot {
 
         // if enemies are visible, but too far, chase
         // should automatically target the closest one
-        RobotInfo[] seenEnemies = rc.senseNearbyRobots(myVisionRadius, them);
-        if (seenEnemies.length > 0) {
-            MapLocation targetLoc = seenEnemies[0].location;
+        if (sensedEnemies.length > 0) {
+            MapLocation targetLoc = sensedEnemies[0].location;
             Direction moveDir = Nav.fuzzyTo(targetLoc);
             Debug.drawLine(here, targetLoc, RED);
             return;
         }
 
+        // go to reported enemies
+        {
+            // find new target if needed
+            if (targetEnemyLoc == null) {
+                findNewTargetEnemyLoc();
+            } else {
+                // if we are within sensing range, but reach this code, that means the enemy is gone
+                if (rc.canSenseLocation(targetEnemyLoc)) {
+                    findNewTargetEnemyLoc();
+                }
+            }
+
+            // go towards target, if we have one
+            if (targetEnemyLoc != null) {
+                Nav.fuzzyTo(targetEnemyLoc);
+                drawLine(here, targetEnemyLoc, MAGENTA);
+                rc.setIndicatorString("going to report " + exploreLoc);
+                return;
+            }
+        }
 
         explore();
         rc.setIndicatorString("exploring " + exploreLoc);
@@ -63,5 +85,20 @@ public class Soldier extends Robot {
 //            randDir = randDir.rotateLeft();
 //        }
 
+    }
+
+    public static void findNewTargetEnemyLoc() {
+        MapLocation bestLoc = null;
+        int bestDist = P_INF;
+        for (int i = Comms.reportedEnemyCount; --i >= 0;) {
+            MapLocation loc = Comms.reportedEnemyLocs[i];
+            int dist = here.distanceSquaredTo(loc);
+            if (dist < bestDist) {
+                bestLoc = loc;
+                bestDist = dist;
+            }
+        }
+
+        targetEnemyLoc = bestLoc;
     }
 }

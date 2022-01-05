@@ -32,13 +32,13 @@ public class Archon extends Robot {
         // second turn update
 
         for (int i = 0; i < 4; i++) {
-            log("i " + i + ": " + allyArchonLocs[i]);
+            log("i " + i + ": " + allyArchonLocs[i] + " " + isAllyArchonLive[i]);
         }
 
-        if (myID == 5) {
-            printBuffer();
-            rc.resign();
-        }
+//        if (myID == 5) {
+//            printBuffer();
+//            rc.resign();
+//        }
 
         if (!rc.isActionReady()) {
             return;
@@ -76,5 +76,14 @@ public class Archon extends Robot {
                 return;
             }
         }
+    }
+
+    public static boolean isPrimaryArchon() {
+        for (int i = myArchonIndex; --i >= 0;) {
+            if (isAllyArchonLive[i]) {
+                return false;
+            }
+        }
+        return true;
     }
 }

@@ -6,6 +6,7 @@ import static battlecode.common.RobotType.*;
 
 import static firstbot.Debug.*;
 import static firstbot.Robot.*;
+import static firstbot.Utils.*;
 
 
 public class Comms {
@@ -82,6 +83,15 @@ public class Comms {
         int aft = Clock.getBytecodesLeft();
     }
 
+    final public static int MASK1 = 1;
+    final public static int MASK2 = 3;
+    final public static int MASK3 = 7;
+    final public static int MASK4 = 15;
+    final public static int MASK5 = 31;
+    final public static int MASK6 = 63;
+    final public static int MASK7 = 127;
+    final public static int MASK8 = 255;
+
     public static int getBitMask(int left, int right) {
         return ((1 << (right - left)) - 1) << left;
     }
@@ -110,12 +120,13 @@ public class Comms {
     final public static int FLAG_SECTION_SIZE = 1;
 
     final public static int REPORT_RESOURCE_SECTION_ID = 3;
-    final public static int REPORT_RESOURCE_OFFSET = FLAG_SECTION_OFFSET + FLAG_SECTION_SIZE;
-    final public static int REPORT_RESOURCE_SIZE = 16;
+    final public static int REPORT_RESOURCE_SECTION_OFFSET = FLAG_SECTION_OFFSET + FLAG_SECTION_SIZE;
+    final public static int REPORT_RESOURCE_SECTION_SIZE = 16;
+
 
     final public static int REPORT_ENEMY_SECTION_ID = 4;
-    final public static int REPORT_ENEMY_OFFSET = REPORT_RESOURCE_OFFSET + REPORT_RESOURCE_SIZE;
-    final public static int REPORT_ENEMY_SIZE = 16;
+    final public static int REPORT_ENEMY_SECTION_OFFSET = REPORT_RESOURCE_SECTION_OFFSET + REPORT_RESOURCE_SECTION_SIZE;
+    final public static int REPORT_ENEMY_SECTION_SIZE = 16;
 
     /*
     Write a message to an empty cell in a given section
@@ -165,7 +176,19 @@ public class Comms {
         }
         switch (sectionID) {
             case ALLY_ARCHON_SECTION_ID:
-                readAllyArchonLoc(msgInfo, msgIndex);
+                readAllyArchon(msgInfo, msgIndex);
+                break;
+            case ENEMY_ARCHON_SECTION_ID:
+                // todo
+                break;
+            case FLAG_SECTION_ID:
+                // todo
+                break;
+            case REPORT_RESOURCE_SECTION_ID:
+                // todo
+                break;
+            case REPORT_ENEMY_SECTION_ID:
+                readReportEnemy(msgInfo);
                 break;
 
             default:
@@ -177,17 +200,53 @@ public class Comms {
     }
 
     /*
-    Format:
-    Bits:
-    0-11 = Location
-    12 = Turn parity
-    13 = Live
+    All message section that need to be periodically cleared should be put here
      */
-    public static void writeAllyArchonLoc(MapLocation loc, int archonIndex, boolean live) throws GameActionException {
-        log("Writing 'Ally Archon Loc' message " + loc + " " + archonIndex + " " + live);
+    public static void clearMessageBoard() throws GameActionException {
+        int[][] sectionInfo = new int[][]{
+            {REPORT_RESOURCE_SECTION_OFFSET, REPORT_RESOURCE_SECTION_SIZE},
+            {REPORT_ENEMY_SECTION_OFFSET, REPORT_ENEMY_SECTION_SIZE},
+        };
+
+//        int a = Clock.getBytecodesLeft();
+        for (int i = sectionInfo.length; --i >= 0;) {
+            clearMessageSection(sectionInfo[i][0], sectionInfo[i][1]);
+        }
+//        int b = Clock.getBytecodesLeft();
+//        log("byte " + (a - b));
+    }
+
+
+    public static void clearMessageSection(int sectionOffset, int sectionSize) throws GameActionException {
+        int sectionEnd = sectionOffset + sectionSize;
+        for (int i = sectionOffset; i < sectionEnd; i++) {
+            commArray[i] = 0;
+            rc.writeSharedArray(i, 0);
+        }
+    }
+
+
+    /*
+    MESSAGE FORMAT:
+    --------------
+    [BIT RANGE] | [MEANING]
+    --------------
+    Range values are inclusive
+    Can go from 0-14
+    ---
+    Bit index 15 is always the 'used' bit
+     */
+
+    /*
+    0-11 | Location
+    12 | Turn parity
+    13 | Live
+     */
+    public static void writeAllyArchon(MapLocation loc, int archonIndex, boolean live) throws GameActionException {
+        log("Writing 'Ally Archon' message " + loc + " " + archonIndex + " " + live);
 
         int msg = loc2bits(loc);
-        if (myID != 3 && roundNum % 2 == 1) {
+        if (roundNum % 2 == 1) {
             msg += 1 << 12; // initial turn parity (should be odd)
         }
         if (live) {
@@ -197,7 +256,7 @@ public class Comms {
         writeToCell(msg, ALLY_ARCHON_SECTION_OFFSET + archonIndex);
     }
 
-    public static void readAllyArchonLoc(int msgInfo, int archonIndex) throws GameActionException {
+    public static void readAllyArchon(int msgInfo, int archonIndex) throws GameActionException {
         // location
         allyArchonLocs[archonIndex] = bits2loc(msgInfo & LOC_MASK);
 
@@ -211,12 +270,38 @@ public class Comms {
             // if tp is off, then bot is dead
             if (tpBit % 2 != roundNum % 2) {
                 // signal dead
-                writeAllyArchonLoc(allyArchonLocs[archonIndex], archonIndex, false);
+                writeAllyArchon(allyArchonLocs[archonIndex], archonIndex, false);
             }
         }
     }
 
-    public static void readAllAllyArchonLocs() throws GameActionException {
+    public static void readAllyArchonSection() throws GameActionException {
         readMessageSection(ALLY_ARCHON_SECTION_ID, ALLY_ARCHON_SECTION_OFFSET, ALLY_ARCHON_SECTION_SIZE);
+    }
+
+    public static void writeReportEnemy(MapLocation loc, RobotType rt) throws GameActionException {
+        log("Writing 'Report Enemy' message " + loc + " " + rt);
+
+        int msg = loc2bits(loc);
+        msg += rt2int(rt) << 12;
+
+        writeToEmptyCell(msg, REPORT_ENEMY_SECTION_OFFSET, REPORT_ENEMY_SECTION_SIZE);
+    }
+
+    public static void readReportEnemy(int msgInfo) throws GameActionException {
+        MapLocation loc = bits2loc(msgInfo & LOC_MASK);
+        RobotType rt = int2rt((msgInfo >> 12) & MASK3);
+
+        reportedEnemyLocs[reportedEnemyCount++] = loc;
+        log("Reported enemy at " + loc + " " + rt);
+    }
+
+    public static MapLocation[] reportedEnemyLocs;
+    public static int reportedEnemyCount;
+    public static void readReportEnemySection() throws GameActionException {
+        reportedEnemyLocs = new MapLocation[REPORT_ENEMY_SECTION_SIZE];
+        reportedEnemyCount = 0;
+
+        readMessageSection(REPORT_ENEMY_SECTION_ID, REPORT_ENEMY_SECTION_OFFSET, REPORT_ENEMY_SECTION_SIZE);
     }
 }

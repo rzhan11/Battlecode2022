@@ -1,6 +1,7 @@
 package firstbot;
 
 import battlecode.common.*;
+import static battlecode.common.RobotType.*;
 
 import static firstbot.Comms.*;
 import static firstbot.Debug.*;
@@ -177,5 +178,50 @@ public class Utils {
                 logi("WARNING: Tried to get max surround of unknown offset " + offset);
                 return -1;
         }
+    }
+
+    public static int rt2int(RobotType rt) {
+        switch (rt) {
+            case ARCHON:
+                return 0;
+            case LABORATORY:
+                return 1;
+            case WATCHTOWER:
+                return 2;
+            case MINER:
+                return 3;
+            case BUILDER:
+                return 4;
+            case SOLDIER:
+                return 5;
+            case SAGE:
+                return 6;
+            default:
+                logi("WARNING: 'rt2int' Unknown RobotType " + rt);
+                return -1;
+        }
+    }
+
+    public static RobotType int2rt(int i) {
+        switch (i) {
+            case 0:
+                return ARCHON;
+            case 1:
+                return LABORATORY;
+            case 2:
+                return WATCHTOWER;
+            case 3:
+                return MINER;
+            case 4:
+                return BUILDER;
+            case 5:
+                return SOLDIER;
+            case 6:
+                return SAGE;
+            default:
+                logi("WARNING: 'int2rt' Unknown RobotType index " + i);
+                return null;
+        }
+
     }
 }
