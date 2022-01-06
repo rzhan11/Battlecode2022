@@ -1,9 +1,9 @@
-package firstbot;
+package micro_bot;
 
 import battlecode.common.*;
 
-import static firstbot.Debug.*;
-import static firstbot.Robot.*;
+import static micro_bot.Debug.*;
+import static micro_bot.Robot.*;
 
 public class HardCode {
 

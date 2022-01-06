@@ -1,9 +1,9 @@
-package firstbot;
+package micro_bot;
 
 import battlecode.common.*;
 
 import static battlecode.common.RobotType.*;
-import static firstbot.Utils.*;
+import static micro_bot.Utils.*;
 
 public class Builder extends Robot {
     // constants

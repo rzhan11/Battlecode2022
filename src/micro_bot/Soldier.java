@@ -1,9 +1,10 @@
-package firstbot;
+package micro_bot;
 
 import battlecode.common.*;
+import static battlecode.common.RobotType.*;
 
-import static firstbot.Debug.*;
-import static firstbot.Utils.*;
+import static micro_bot.Debug.*;
+import static micro_bot.Utils.*;
 
 public class Soldier extends Robot {
     // constants
@@ -40,12 +41,27 @@ public class Soldier extends Robot {
             return;
         }
 
-        // if in range of enemy and attack is on cooldown, move away from damaging enemies
+        // if in range of enemy and attack is on cooldown, move away from enemy soldiers
         if (!rc.isActionReady()) {
-            // find closest damaging enemy
+            // find closest danger soldiers
+            RobotInfo[] closeEnemies = rc.senseNearbyRobots(SOLDIER.actionRadiusSquared, them);
+            MapLocation closestEnemySoldier = null;
+            int bestDist = P_INF;
+            for (int i = closeEnemies.length; --i >= 0;) {
+                RobotInfo ri = closeEnemies[i];
+                if (ri.type == SOLDIER) {
+                    int dist = here.distanceSquaredTo(ri.location);
+                    if (dist < bestDist) {
+                        bestDist = dist;
+                        closestEnemySoldier = ri.location;
+                    }
+                }
+            }
 
-
-
+            if (closestEnemySoldier != null) {
+                Nav.fuzzyAway(closestEnemySoldier);
+                return;
+            }
         }
 
         // if enemies are visible, but too far, chase
@@ -89,14 +105,52 @@ public class Soldier extends Robot {
 
         // if enemies in range, attack
         RobotInfo[] attackableEnemies = rc.senseNearbyRobots(myActionRadius, them);
-        if (attackableEnemies.length > 0) {
-            MapLocation loc = attackableEnemies[0].location;
-            if (rc.canAttack(loc)) {
-                Actions.doAttack(loc);
+
+        RobotInfo bestEnemy = null;
+        int bestScore = N_INF;
+        for (int i = attackableEnemies.length; --i >= 0;) {
+            int score = getAttackEnemyScore(attackableEnemies[i]);
+            if (score > bestScore) {
+                bestEnemy = attackableEnemies[i];
+                bestScore = score;
             }
+        }
+        if (bestEnemy != null) {
+            Actions.doAttack(bestEnemy.location);
             return;
         }
+    }
 
+    public static int getAttackEnemyScore(RobotInfo ri) {
+        int score = 0;
+        // attack troops in this priority
+        switch (ri.type) {
+            case SOLDIER:
+                score += 7e6;
+                break;
+            case WATCHTOWER:
+                score += 6e6;
+                break;
+            case SAGE:
+                score += 5e6;
+                break;
+            case MINER:
+                score += 4e6;
+                break;
+            case BUILDER:
+                score += 3e6;
+                break;
+            case ARCHON:
+                score += 2e6;
+                break;
+            case LABORATORY:
+                score += 1e6;
+                break;
+        }
+
+        // prioritize lower health
+        score += 1000 - ri.health;
+        return score;
     }
 
     public static void findNewTargetEnemyLoc() {

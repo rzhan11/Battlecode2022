@@ -1,11 +1,11 @@
-package firstbot;
+package micro_bot;
 
 import battlecode.common.*;
 import static battlecode.common.RobotType.*;
 
-import static firstbot.Comms.*;
-import static firstbot.Debug.*;
-import static firstbot.Utils.*;
+import static micro_bot.Comms.*;
+import static micro_bot.Debug.*;
+import static micro_bot.Utils.*;
 
 public class Archon extends Robot {
     // constants

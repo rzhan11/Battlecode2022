@@ -1,4 +1,4 @@
-package firstbot;
+package micro_bot;
 
 public class Constants {
     /*

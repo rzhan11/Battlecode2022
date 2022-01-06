@@ -1,10 +1,10 @@
-package firstbot;
+package micro_bot;
 
 import battlecode.common.*;
 
-import static firstbot.Utils.*;
+import static micro_bot.Utils.*;
 
-public class Sage extends Robot {
+public class Watchtower extends Robot {
     // constants
 
     // public static int[] SLANDERER_COSTS;
@@ -22,7 +22,14 @@ public class Sage extends Robot {
     // code run each turn
     public static void turn() throws GameActionException {
         // put role-specific updates here
-
+        RobotInfo[] attackableEnemies = rc.senseNearbyRobots(myActionRadius, them);
+        if (attackableEnemies.length > 0) {
+            MapLocation loc = attackableEnemies[0].location;
+            if (rc.canAttack(loc)) {
+                Actions.doAttack(loc);
+            }
+            return;
+        }
 
     }
 }

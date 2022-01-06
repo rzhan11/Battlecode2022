@@ -1,11 +1,11 @@
-package firstbot;
+package micro_bot;
 
 import battlecode.common.*;
 
-import static firstbot.Comms.*;
-import static firstbot.Debug.*;
-import static firstbot.Robot.*;
-import static firstbot.Utils.*;
+import static micro_bot.Comms.*;
+import static micro_bot.Debug.*;
+import static micro_bot.Robot.*;
+import static micro_bot.Utils.*;
 
 public class Map {
     public static int XMIN = 0;

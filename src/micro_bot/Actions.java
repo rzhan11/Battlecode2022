@@ -1,9 +1,9 @@
-package firstbot;
+package micro_bot;
 
 import battlecode.common.*;
 
-import static firstbot.Robot.*;
-import static firstbot.Debug.*;
+import static micro_bot.Robot.*;
+import static micro_bot.Debug.*;
 
 public class Actions {
     public static void doMove(Direction dir) throws GameActionException {

@@ -1,8 +1,8 @@
-package firstbot;
+package micro_bot;
 
 import battlecode.common.*;
 
-import static firstbot.Robot.*;
+import static micro_bot.Robot.*;
 
 public class Debug {
 

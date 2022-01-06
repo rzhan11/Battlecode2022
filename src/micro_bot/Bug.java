@@ -1,13 +1,13 @@
-package firstbot;
+package micro_bot;
 
 import battlecode.common.*;
 
 import java.util.HashMap;
 
-import static firstbot.Constants.*;
-import static firstbot.Debug.*;
-import static firstbot.Map.*;
-import static firstbot.Robot.*;
+import static micro_bot.Constants.*;
+import static micro_bot.Debug.*;
+import static micro_bot.Map.*;
+import static micro_bot.Robot.*;
 
 public class Bug extends Nav {
 
