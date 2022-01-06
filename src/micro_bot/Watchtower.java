@@ -12,12 +12,14 @@ public class Watchtower extends Robot {
 
     // variables
 
+    public static boolean mayDisintegrate;
+
     // things to do on turn 1 of existence
     public static void firstTurnSetup() throws GameActionException {
         // first turn comms
         // Comms.writeXBounds();
 
-
+        mayDisintegrate = (randInt(10) == 0);
     }
 
     // code run each turn
@@ -28,6 +30,11 @@ public class Watchtower extends Robot {
         if (!rc.isActionReady()) {
             return;
         }
+
+//        if (mayDisintegrate && timeSinceEnemy > 50) {
+//            rc.disintegrate();
+//            return;
+//        }
 
         // if enemies in range, attack
         RobotInfo[] attackableEnemies = rc.senseNearbyRobots(myActionRadius, them);

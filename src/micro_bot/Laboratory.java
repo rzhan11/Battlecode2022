@@ -23,6 +23,14 @@ public class Laboratory extends Robot {
     public static void turn() throws GameActionException {
         // put role-specific updates here
 
+        if (!rc.isActionReady()) {
+            return;
+        }
+
+        if (rc.getTeamLeadAmount(us) > 1000 && rc.getTeamGoldAmount(us) < 100) {
+            Actions.doTransmute();
+            return;
+        }
 
     }
 }

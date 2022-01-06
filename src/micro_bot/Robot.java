@@ -93,6 +93,8 @@ public abstract class Robot extends Constants {
     public static RobotInfo[] sensedEnemies;
     public static RobotInfo[] sensedNeutrals;
 
+    public static int timeSinceEnemy = 0;
+
     // turn-dependent stats of my robot/game state
 
     public static MapLocation[] allyArchonLocs = new MapLocation[MAX_ARCHONS];
@@ -152,6 +154,11 @@ public abstract class Robot extends Constants {
         sensedEnemies = rc.senseNearbyRobots(-1, them);
         sensedNeutrals = rc.senseNearbyRobots(-1, neutral);
 
+        if (sensedEnemies.length > 0) {
+            timeSinceEnemy = 0;
+        } else {
+            timeSinceEnemy++;
+        }
 
         // print basic info
         printMyInfo();

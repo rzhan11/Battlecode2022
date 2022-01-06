@@ -37,7 +37,7 @@ public class Actions {
     }
 
     public static void doMutate(MapLocation loc) throws GameActionException {
-        log("MUTATING " + here);
+        log("MUTATING " + loc);
         drawLine(here, loc, PINK);
         rc.mutate(loc);
     }
@@ -46,6 +46,12 @@ public class Actions {
         log("TRANSFORMING " + here);
         drawDot(here, CYAN);
         rc.transform();
+    }
+
+    public static void doDisintegrate() throws GameActionException {
+        drawDot(here, BLACK);
+        log("DISINTEGRATING " + here);
+        rc.disintegrate();
     }
 
     public static void doTransmute() throws GameActionException {

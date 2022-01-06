@@ -65,6 +65,9 @@ public class Comms {
     -----
     */
 
+
+
+
     /*
     Comms DETAILS:
     -----
@@ -128,7 +131,6 @@ public class Comms {
     final public static int REPORT_RESOURCE_SECTION_ID = 3;
     final public static int REPORT_RESOURCE_SECTION_OFFSET = FLAG_SECTION_OFFSET + FLAG_SECTION_SIZE;
     final public static int REPORT_RESOURCE_SECTION_SIZE = 16;
-
 
     final public static int REPORT_ENEMY_SECTION_ID = 4;
     final public static int REPORT_ENEMY_SECTION_OFFSET = REPORT_RESOURCE_SECTION_OFFSET + REPORT_RESOURCE_SECTION_SIZE;

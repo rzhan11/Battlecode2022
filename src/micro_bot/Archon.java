@@ -57,6 +57,8 @@ public class Archon extends Robot {
                 } else {
                     if (random() < 0.8) {
                         spawnType = SOLDIER;
+                    } else {
+                        spawnType = MINER;
                     }
                 }
             }

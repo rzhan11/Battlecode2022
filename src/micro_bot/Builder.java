@@ -20,18 +20,56 @@ public class Builder extends Robot {
     public static void turn() throws GameActionException {
         // put role-specific updates here
 
+
         // try to build random watchtower TESTING
-        if (random() < 0.5) {
+        if (random() < 0.5 && rc.isActionReady()) {
+            // mutate towers if rich
+            RobotInfo[] adjAllies = rc.senseNearbyRobots(2, us);
+            if (rc.getTeamGoldAmount(us) >= 100) {
+                for (RobotInfo ri: adjAllies) {
+                    if (ri != null && ri.mode == RobotMode.TURRET && ri.type == WATCHTOWER) {
+                        if (ri.level == 2) {
+                            Actions.doMutate(ri.location);
+                            return;
+                        }
+                    }
+                }
+            }
+
+            // mutate towers if rich
+            if (rc.getTeamLeadAmount(us) >= 2500) {
+                for (RobotInfo ri: adjAllies) {
+                    if (ri != null && ri.mode == RobotMode.TURRET  && ri.type == WATCHTOWER) {
+                        if (ri.level == 1) {
+                            if (rc.getTeamLeadAmount(us) >= 4000 || sensedEnemies.length > 0 && ri.health < ri.type.getMaxHealth(ri.level)) {
+                                // only upgrade if this tower is near frontlines
+                                Actions.doMutate(ri.location);
+                                return;
+                            }
+                        }
+                    }
+                }
+            }
 
             if (rc.getTeamLeadAmount(us) > 1000) {
+                RobotType spawnType = WATCHTOWER;
+                if (random() < 0.1) {
+                    if (timeSinceEnemy > 50 && roundNum > 500) {
+                        spawnType = LABORATORY;
+                    }
+                }
+
                 Direction randDir = getRandomDir();
                 for (int i = 8; --i >= 0;) {
-                    if (rc.canBuildRobot(WATCHTOWER, randDir)) {
+                    if (rc.canBuildRobot(spawnType, randDir)) {
                         MapLocation loc = here.add(randDir);
                         if ((loc.x + loc.y) % 3 != 0) { // only build on lattice
                             continue;
                         }
-                        Actions.doBuildRobot(WATCHTOWER, randDir);
+                        if (spawnType == WATCHTOWER && loc.x % 8 == 0) {
+                            continue;
+                        }
+                        Actions.doBuildRobot(spawnType, randDir);
                         return;
                     }
                     randDir = randDir.rotateLeft();
@@ -58,7 +96,7 @@ public class Builder extends Robot {
             RobotInfo ri = sensedAllies[i];
             RobotType rt = ri.type;
             if (rt.isBuilding() && ri.health < rt.getMaxHealth(ri.level)) {
-                int score = getHealScore(ri);
+                int score = getRepairScore(ri);
                 if (score > bestScore) {
                     bestRepairLoc = ri.location;
                     bestScore = score;
@@ -98,7 +136,7 @@ public class Builder extends Robot {
             RobotInfo ri = closeAllies[i];
             RobotType rt = ri.type;
             if (rt.isBuilding() && ri.health < rt.getMaxHealth(ri.level)) {
-                int score = getHealScore(ri);
+                int score = getRepairScore(ri);
                 if (score > bestScore) {
                     bestRepairLoc = ri.location;
                     bestScore = score;
@@ -123,11 +161,11 @@ public class Builder extends Robot {
     Finished buildings get prio over prototypes
     Prio lower health
      */
-    public static int getHealScore(RobotInfo ri) {
+    public static int getRepairScore(RobotInfo ri) {
         int score = 0;
         switch (ri.type) {
             case ARCHON:
-                if (ri.health < 500) {
+                if (ri.health < 250) {
                     score += 4e6;
                 } else {
                     score += 2e6;
@@ -144,10 +182,13 @@ public class Builder extends Robot {
             default:
                 logi("WARNING: 'getHealScore' unexpected unit " + ri.type);
         }
+        // prioritize built buildings
         if (ri.mode != RobotMode.PROTOTYPE) {
             score += 1e3;
+            score += 1000 - ri.health;
+        } else { // for prototypes, prioritize higher health ones
+            score += ri.health;
         }
-        score += 1000 - ri.health;
         return score;
     }
 }

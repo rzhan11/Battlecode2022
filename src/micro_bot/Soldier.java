@@ -147,6 +147,7 @@ public class Soldier extends Robot {
                 score += 1e6;
                 break;
         }
+        // todo: add kill bonus
 
         // prioritize lower health
         score += 1000 - ri.health;
