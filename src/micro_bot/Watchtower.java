@@ -2,6 +2,7 @@ package micro_bot;
 
 import battlecode.common.*;
 
+import static micro_bot.Soldier.*;
 import static micro_bot.Utils.*;
 
 public class Watchtower extends Robot {
@@ -22,12 +23,27 @@ public class Watchtower extends Robot {
     // code run each turn
     public static void turn() throws GameActionException {
         // put role-specific updates here
+
+
+        if (!rc.isActionReady()) {
+            return;
+        }
+
+        // if enemies in range, attack
         RobotInfo[] attackableEnemies = rc.senseNearbyRobots(myActionRadius, them);
-        if (attackableEnemies.length > 0) {
-            MapLocation loc = attackableEnemies[0].location;
-            if (rc.canAttack(loc)) {
-                Actions.doAttack(loc);
+
+        RobotInfo bestEnemy = null;
+        int bestScore = N_INF;
+        for (int i = attackableEnemies.length; --i >= 0;) {
+            RobotInfo ri = attackableEnemies[i];
+            int score = Soldier.getAttackEnemyScore(ri);
+            if (score > bestScore) {
+                bestEnemy = attackableEnemies[i];
+                bestScore = score;
             }
+        }
+        if (bestEnemy != null) {
+            Actions.doAttack(bestEnemy.location);
             return;
         }
 

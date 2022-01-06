@@ -5,6 +5,7 @@ import static battlecode.common.RobotType.*;
 
 import static micro_bot.Comms.*;
 import static micro_bot.Debug.*;
+import static micro_bot.Map.*;
 import static micro_bot.Utils.*;
 
 public class Archon extends Robot {
@@ -44,23 +45,26 @@ public class Archon extends Robot {
             return;
         }
 
-
         // rotate through different spawns
-        if (roundNum % rc.getArchonCount() == myArchonIndex % rc.getArchonCount()) {
-        // only spawn miner and soldier
+        boolean shouldTrySpawn = roundNum % rc.getArchonCount() == myArchonIndex % rc.getArchonCount();
+        shouldTrySpawn |= rc.getTeamLeadAmount(us) > 500;
+        if (shouldTrySpawn) {
+            // only spawn miner and soldier
             RobotType spawnType = potentialSpawns[numSpawns % 2];
+            if (rc.getTeamLeadAmount(us) > 500 * rc.getArchonCount()) { // build builder if rich
+                if (random() < 0.2) {
+                    spawnType = BUILDER;
+                } else {
+                    if (random() < 0.8) {
+                        spawnType = SOLDIER;
+                    }
+                }
+            }
             if (rc.getTeamLeadAmount(us) >= spawnType.buildCostLead) {
-                for (int i = DIRS.length; --i >= 0; ) {
-                    Direction dir = DIRS[i];
-                    MapLocation loc = here.add(dir);
-                    if (!rc.onTheMap(loc)) {
-                        continue;
-                    }
-                    if (!rc.canSenseRobotAtLocation(loc)) {
-                        Actions.doBuildRobot(spawnType, dir);
-                        numSpawns++;
-                        return;
-                    }
+                Direction dir = tryBuild(spawnType, Direction.NORTH);
+                if (dir != null) {
+                    numSpawns++;
+                    return;
                 }
             }
         }
@@ -77,6 +81,20 @@ public class Archon extends Robot {
                 return;
             }
         }
+    }
+
+    public static Direction tryBuild(RobotType rt, Direction buildDir) throws GameActionException {
+        for (Direction dir: getClosestDirs(buildDir)) {
+            MapLocation loc = here.add(dir);
+            if (!rc.onTheMap(loc)) {
+                continue;
+            }
+            if (!rc.canSenseRobotAtLocation(loc)) {
+                Actions.doBuildRobot(rt, dir);
+                return dir;
+            }
+        }
+        return null;
     }
 
     public static boolean isPrimaryArchon() {

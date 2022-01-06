@@ -3,21 +3,17 @@ package micro_bot;
 import battlecode.common.*;
 
 import static battlecode.common.RobotType.*;
+import static micro_bot.Debug.logi;
 import static micro_bot.Utils.*;
 
 public class Builder extends Robot {
     // constants
 
     // variables
-    public static int healTarget;
-    public static RobotInfo target;
 
     // things to do on turn 1 of existence
     public static void firstTurnSetup() throws GameActionException {
         // first turn comms
-        // Comms.writeXBounds();
-        healTarget = -1;
-        target = null;
     }
 
     // code run each turn
@@ -25,67 +21,133 @@ public class Builder extends Robot {
         // put role-specific updates here
 
         // try to build random watchtower TESTING
-        if (randInt(100000) == 0) {
-            Direction randDir = getRandomDir();
-            for (int i = 8; --i >= 0;) {
-                if (rc.canBuildRobot(WATCHTOWER, randDir)) {
-                    Actions.doBuildRobot(WATCHTOWER, randDir);
-                    return;
-                }
-                randDir = randDir.rotateLeft();
-            }
-        }
+        if (random() < 0.5) {
 
-        // check if target building needs healing
-        if (rc.canSenseRobot(healTarget)) {
-            RobotInfo bot = rc.senseRobot(healTarget);
-            if (target.health == target.type.getMaxHealth((target.health))) {
-                healTarget = -1;
-                target = null;
-            }
-            else {
-                target = bot;
-            }
-        }
-
-        // look for buildings nearby to heal
-        if (healTarget == -1) {
-            RobotInfo[] nearbyRobots = rc.senseNearbyRobots(myVisionRadius, us);
-            for (int i = nearbyRobots.length; --i >= 0;) {
-                RobotInfo bot = nearbyRobots[i];
-                RobotType type = bot.getType();
-                if (type.isBuilding()) {
-                    if (bot.health < type.getMaxHealth(bot.level)) {
-                        healTarget = bot.ID;
-                        target = bot;
+            if (rc.getTeamLeadAmount(us) > 1000) {
+                Direction randDir = getRandomDir();
+                for (int i = 8; --i >= 0;) {
+                    if (rc.canBuildRobot(WATCHTOWER, randDir)) {
+                        MapLocation loc = here.add(randDir);
+                        if ((loc.x + loc.y) % 3 != 0) { // only build on lattice
+                            continue;
+                        }
+                        Actions.doBuildRobot(WATCHTOWER, randDir);
+                        return;
                     }
+                    randDir = randDir.rotateLeft();
                 }
             }
         }
 
-        // heal building if needed
+        tryRepair();
+        Direction moveDir = moveLogic();
+        if (moveDir != null) {
+            tryRepair();
+        }
+    }
 
-        if (healTarget >= 0) {
-            if (rc.canRepair(target.location)) {
-                Actions.doRepair(target.location);
-                return;
-            }
-            else {
-                Direction targetDir = here.directionTo(target.location);
-                Direction moveDir = Nav.tryMoveApprox(targetDir);
-                return;
-            }
+    public static Direction moveLogic() throws GameActionException {
+        if (!rc.isMovementReady()) {
+            return null;
         }
-        else {
-            // move randomly
-            Direction randDir = getRandomDir();
-            for (int i = 8; --i >= 0;) {
-                if (rc.canMove(randDir)) {
-                    Actions.doMove(randDir);
-                    return;
+
+        MapLocation bestRepairLoc = null;
+        int bestScore = N_INF;
+
+        for (int i = sensedAllies.length; --i >= 0;) {
+            RobotInfo ri = sensedAllies[i];
+            RobotType rt = ri.type;
+            if (rt.isBuilding() && ri.health < rt.getMaxHealth(ri.level)) {
+                int score = getHealScore(ri);
+                if (score > bestScore) {
+                    bestRepairLoc = ri.location;
+                    bestScore = score;
                 }
-                randDir = randDir.rotateLeft();
             }
         }
+
+        // repair if found a location
+        if (bestRepairLoc != null) {
+            Direction moveDir = Nav.fuzzyTo(bestRepairLoc);
+            return moveDir;
+        }
+
+        // move randomly
+        Direction randDir = getRandomDir();
+        for (int i = 8; --i >= 0;) {
+            if (rc.canMove(randDir)) {
+                Actions.doMove(randDir);
+                return randDir;
+            }
+            randDir = randDir.rotateLeft();
+        }
+
+        return null;
+    }
+
+    public static void tryRepair() throws GameActionException {
+        if (!rc.isActionReady()) {
+            return;
+        }
+
+        MapLocation bestRepairLoc = null;
+        int bestScore = N_INF;
+
+        RobotInfo[] closeAllies = rc.senseNearbyRobots(myActionRadius, us);
+        for (int i = closeAllies.length; --i >= 0;) {
+            RobotInfo ri = closeAllies[i];
+            RobotType rt = ri.type;
+            if (rt.isBuilding() && ri.health < rt.getMaxHealth(ri.level)) {
+                int score = getHealScore(ri);
+                if (score > bestScore) {
+                    bestRepairLoc = ri.location;
+                    bestScore = score;
+                }
+            }
+        }
+
+        // repair if found a location
+        if (bestRepairLoc != null) {
+            Actions.doRepair(bestRepairLoc);
+            return;
+        }
+    }
+
+    /*
+    Priority:
+    1. Low health archons (<500)
+    2. Watchtower
+    3. Any health archons
+    4. Laboratory
+    ---
+    Finished buildings get prio over prototypes
+    Prio lower health
+     */
+    public static int getHealScore(RobotInfo ri) {
+        int score = 0;
+        switch (ri.type) {
+            case ARCHON:
+                if (ri.health < 500) {
+                    score += 4e6;
+                } else {
+                    score += 2e6;
+                }
+                break;
+            case WATCHTOWER:
+                score += 3e6;
+                break;
+
+            case LABORATORY:
+                score += 1e6;
+                break;
+
+            default:
+                logi("WARNING: 'getHealScore' unexpected unit " + ri.type);
+        }
+        if (ri.mode != RobotMode.PROTOTYPE) {
+            score += 1e3;
+        }
+        score += 1000 - ri.health;
+        return score;
     }
 }

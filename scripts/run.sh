@@ -2,8 +2,8 @@ cd ..
 
 ./gradlew run \
 -PteamA=micro_bot \
--PteamB=firstbot_nolog \
--Pmaps=intersection \
+-PteamB=micro_bot \
+-Pmaps=maptestsmall \
 2>&1 | tee scripts/logs/log.txt
 
 #./gradlew run \
