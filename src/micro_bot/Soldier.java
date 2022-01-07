@@ -47,7 +47,7 @@ public class Soldier extends Robot {
             RobotInfo[] closeEnemies = rc.senseNearbyRobots(SOLDIER.actionRadiusSquared, them);
             MapLocation closestEnemySoldier = null;
             int bestDist = P_INF;
-            for (int i = closeEnemies.length; --i >= 0;) {
+            for (int i = closeEnemies.length; --i >= 0; ) {
                 RobotInfo ri = closeEnemies[i];
                 if (ri.type == SOLDIER) {
                     int dist = here.distanceSquaredTo(ri.location);
@@ -71,7 +71,7 @@ public class Soldier extends Robot {
             if (isAllyArchonLive[i]
                     && here.isWithinDistanceSquared(allyArchonLocs[i],25)
                     && !here.isWithinDistanceSquared(allyArchonLocs[i], 4)
-                    && random() < 0.3) {
+                    && random() > 0.1) {
                 return;
             }
         }
