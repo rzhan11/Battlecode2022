@@ -64,6 +64,18 @@ public class Soldier extends Robot {
             }
         }
 
+        // if soldier close to archon but outside of 2 unit radius
+        // randomly choose some to keep on guard
+        // ideas: see if moving this chunk around before/after other ifs is better
+        for (int i = allyArchonLocs.length; --i >= 0;) {
+            if (isAllyArchonLive[i]
+                    && here.isWithinDistanceSquared(allyArchonLocs[i],25)
+                    && !here.isWithinDistanceSquared(allyArchonLocs[i], 4)
+                    && random() < 0.3) {
+                return;
+            }
+        }
+
         // if enemies are visible, but too far, chase
         // should automatically target the closest one
         if (sensedEnemies.length > 0) {
