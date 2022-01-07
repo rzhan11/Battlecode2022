@@ -326,11 +326,13 @@ public class Comms {
 
         // turn parity
         if (isAllyArchonLive[archonIndex] && myType == ARCHON) {
-            int tpBit = (msgInfo >> 12) & 1;
-            // if tp is off, then bot is dead
-            if (tpBit % 2 != roundNum % 2) {
-                // signal dead
-                writeAllyArchon(allyArchonLocs[archonIndex], archonIndex, false);
+            if (archonIndex < Archon.myArchonIndex) { // only check archons who go before it
+                int tpBit = (msgInfo >> 12) & 1;
+                // if tp is off, then bot is dead
+                if (tpBit % 2 != roundNum % 2) {
+                    // signal dead
+                    writeAllyArchon(allyArchonLocs[archonIndex], archonIndex, false);
+                }
             }
         }
     }
