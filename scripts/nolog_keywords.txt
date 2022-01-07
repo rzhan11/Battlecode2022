@@ -4,3 +4,4 @@ ttlog(
 logline(
 loghalf(
 logByte(
+rc.resign(
