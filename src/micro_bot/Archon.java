@@ -6,6 +6,7 @@ import static battlecode.common.RobotType.*;
 import static micro_bot.Comms.*;
 import static micro_bot.Debug.*;
 import static micro_bot.Map.*;
+import static micro_bot.Resource.*;
 import static micro_bot.Utils.*;
 
 public class Archon extends Robot {
@@ -20,6 +21,7 @@ public class Archon extends Robot {
     // things to do on turn 1 of existence
     public static void firstTurnSetup() throws GameActionException {
         // first turn comms
+
     }
 
     public static RobotType[] potentialSpawns = new RobotType[]{MINER, SOLDIER, BUILDER};
@@ -29,11 +31,18 @@ public class Archon extends Robot {
     // code run each turn
     public static void turn() throws GameActionException {
         // put role-specific updates here
+//        if (roundNum == 100) {
+//            rc.resign();
+//        }
 
         // second turn update
 
         for (int i = 0; i < 4; i++) {
             log("i " + i + ": " + allyArchonLocs[i] + " " + isAllyArchonLive[i]);
+        }
+
+        if (isPrimaryArchon()) {
+            Resource.displayZoneStatus();
         }
 
 //        if (myID == 5) {

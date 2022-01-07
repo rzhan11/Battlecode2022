@@ -10,6 +10,7 @@ public class Actions {
         log("MOVING " + dir);
         drawLine(here, rc.adjacentLocation(dir), YELLOW);
         rc.move(dir);
+        updatePositionInfo();
     }
 
     public static void doAttack(MapLocation loc) throws GameActionException {

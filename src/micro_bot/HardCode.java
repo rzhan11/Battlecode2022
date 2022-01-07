@@ -30,13 +30,18 @@ public class HardCode {
             case WATCHTOWER:
                 break;
             case MINER:
-                initBFS20();
+                init_ZONE_OFFSETS();
+                break;
+//                initBFS20();
             case BUILDER:
-                initBFS20();
+                break;
+//                initBFS20();
             case SOLDIER:
-                initBFS20();
+                break;
+//                initBFS20();
             case SAGE:
-                initBFS20();
+                break;
+//                initBFS20();
         }
     }
 
@@ -78,6 +83,11 @@ public class HardCode {
         if (BOX_EDGES == null) {
             BOX_EDGES = new int[][] {{1,2},{-2,1},{-2,0},{-2,-2},{-1,-2},{-2,2},{-1,2},{2,-2},{2,-1},{2,1},{2,2},{2,0},{-2,-1},{0,-2},{1,-2},{0,2}};
         }
+    }
+
+    public static int[][] ZONE_OFFSETS;
+    public static void init_ZONE_OFFSETS() {
+        ZONE_OFFSETS = new int[][] {{1, 0},{1, 1},{0, 1},{-1, 1},{-1, 0},{-1, -1},{0, -1},{1, -1}};
     }
 
     // todo: make switch statement for lead conversion rates

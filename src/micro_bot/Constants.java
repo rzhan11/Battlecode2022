@@ -31,4 +31,5 @@ public class Constants {
 
     final public static int[] RED = {255, 0, 0};
     final public static int[] GREEN = {0, 255, 0};
+    final public static int[] BLUE = {0, 0, 255};
 }

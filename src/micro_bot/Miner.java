@@ -2,14 +2,15 @@ package micro_bot;
 
 import battlecode.common.*;
 
-import static micro_bot.Debug.*;
+import static micro_bot.Debug.logi;
+import static micro_bot.Resource.*;
 import static micro_bot.Utils.*;
 
 
 public class Miner extends Robot {
     // constants
 
-    // public static int[] SLANDERER_COSTS;
+
 
     // variables
 
@@ -17,18 +18,17 @@ public class Miner extends Robot {
     // things to do on turn 1 of existence
     public static void firstTurnSetup() throws GameActionException {
         // first turn comms
-        // Comms.writeXBounds();
 
-        if (roundNum > 50) {
-            endTurn();
-            updateTurnInfo();
-        }
-
+//        if (roundNum > 50) {
+//            endTurn();
+//            updateTurnInfo();
+//        }
     }
 
     // code run each turn
     public static void turn() throws GameActionException {
         // put role-specific updates here
+
         tryMine();
         moveLogic();
         tryMine();
@@ -42,22 +42,99 @@ public class Miner extends Robot {
         }
 
         // search surrounding tiles for lead
-        for (int[] diff: HardCode.BFS20) {
-            MapLocation loc = here.translate(diff[0], diff[1]);
-            if (!rc.onTheMap(loc)) {
-                continue;
+        {
+            MapLocation[] visibleLeadLocs = rc.senseNearbyLocationsWithLead(myVisionRadius);
+            if (visibleLeadLocs.length > 34) { // 68 / 2
+                visibleLeadLocs = rc.senseNearbyLocationsWithLead(myVisionRadius / 2);
             }
-            if (rc.senseLead(loc) > 1) {
-                Direction moveDir = Nav.fuzzyTo(loc);
-                rc.setIndicatorString("going to " + moveDir + " " + loc);
-                Debug.drawLine(here, loc, RED);
+
+            MapLocation bestLoc = null;
+            int bestDist = P_INF;
+            for (int i = visibleLeadLocs.length; --i >= 0;) {
+                MapLocation loc = visibleLeadLocs[i];
+                if (rc.senseLead(loc) > 1) {
+                    int dist = here.distanceSquaredTo(loc);
+                    if (dist < bestDist) {
+                        bestLoc = loc;
+                        bestDist = dist;
+                    }
+                }
+            }
+
+            if (bestLoc != null) {
+                Direction moveDir = Nav.fuzzyTo(bestLoc);
+                rc.setIndicatorString("going to " + bestLoc);
+                Debug.drawLine(here, bestLoc, RED);
                 return;
             }
+        }
+
+        // go towards unknown zones
+
+        // check if target zones are known
+        if (targetZoneLoc != null && zoneResourceStatus[targetZone[0]][targetZone[1]] != ZONE_UNKNOWN_FLAG) {
+            targetZone = null;
+            targetZoneLoc = null;
+        }
+
+        if (targetZoneLoc == null) {
+            updateResourceZoneTargets();
+        }
+
+        // if no visible lead, go to unknown zone
+        if (targetZoneLoc != null) {
+            Direction moveDir = Nav.fuzzyTo(targetZoneLoc);
+            rc.setIndicatorString("going to target zone " + targetZoneLoc);
+            Debug.drawLine(here, targetZoneLoc, BLUE);
+            return;
         }
 
         // exploring
         explore();
         rc.setIndicatorString("exploring " + exploreLoc);
+    }
+
+    public static int[] targetZone = null;
+    public static MapLocation targetZoneLoc = null;
+
+    public static void updateResourceZoneTargets() {
+        int[] unknownZone = null;
+        MapLocation unknownZoneLoc = null;
+        int[] mineZone = null;
+        MapLocation mineZoneLoc = null;
+
+        int numOffsets = HardCode.ZONE_OFFSETS.length;
+        int randStartIndex = randInt(numOffsets);
+        for (int i = numOffsets; --i >= 0;) {
+            int[] diffs = HardCode.ZONE_OFFSETS[(i + randStartIndex) % numOffsets];
+            int zx = myZoneX + diffs[0];
+            int zy = myZoneY + diffs[1];
+            if (!checkValidZone(zx, zy)) {
+                continue;
+            }
+            switch (zoneResourceStatus[zx][zy]) {
+                case ZONE_UNKNOWN_FLAG:
+                    unknownZone = new int[] {zx, zy};
+                    unknownZoneLoc = zone2Loc(zx, zy);
+                    break;
+                case ZONE_EMPTY_FLAG:
+                    mineZone = new int[] {zx, zy};
+                    mineZoneLoc = zone2Loc(zx, zy);
+                    break;
+                case ZONE_MINE_FLAG:
+                    break;
+                default:
+                    logi("WARNING: 'updateResourceZoneTargets' Unexpected zone flag! " + zoneResourceStatus[zx][zy]);
+            }
+        }
+
+        if (unknownZoneLoc != null) {
+            targetZone = unknownZone;
+            targetZoneLoc = unknownZoneLoc;
+//        } else {
+//            targetZone = mineZone;
+//            targetZoneLoc = mineZoneLoc;
+        }
     }
 
     public static void tryMine() throws GameActionException {

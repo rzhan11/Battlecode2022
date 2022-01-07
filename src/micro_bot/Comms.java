@@ -5,6 +5,7 @@ import battlecode.common.*;
 import static battlecode.common.RobotType.*;
 
 import static micro_bot.Debug.*;
+import static micro_bot.Resource.*;
 import static micro_bot.Robot.*;
 import static micro_bot.Utils.*;
 
@@ -30,7 +31,7 @@ public class Comms {
     Converts a MapLocation to 12-bit representation
      */
     public static int loc2bits(MapLocation loc) {
-        return ((loc.y & COORD_MASK) << COORD_BITS) + (loc.x & COORD_MASK);
+        return (loc.y << COORD_BITS) + loc.x;
     }
 
 
@@ -43,6 +44,29 @@ public class Comms {
         int x = bits & COORD_MASK;
         int y = ((bits - x) >>> COORD_BITS);
         return new MapLocation(x, y);
+    }
+
+    final public static int ZONE_COORD_BITS = 4;
+    final public static int ZONE_COORD_MASK = (1 << ZONE_COORD_BITS) - 1;
+
+    final public static int ZONE_POS_BITS = 2 * ZONE_COORD_BITS;
+    final public static int ZONE_POS_MASK = (1 << ZONE_POS_BITS) - 1;
+    /*
+    Converts a Zone to 8-bit representation
+     */
+    public static int zone2bits(int zx, int zy) {
+        return (zy << ZONE_COORD_BITS) + zx;
+    }
+
+    /*
+    Converts 8 bits to a MapLocation
+    -----
+    bits = msgInfo
+     */
+    public static int[] bits2zone(int bits) {
+        int x = bits & ZONE_COORD_MASK;
+        int y = ((bits - x) >>> ZONE_COORD_BITS);
+        return new int[]{x, y};
     }
 
     /*
@@ -85,11 +109,11 @@ public class Comms {
     public static int[] commArray = new int[COMM_ARRAY_SIZE];
 
     public static void loadCommArray() throws GameActionException {
-        int bef = Clock.getBytecodesLeft();
+//        int bef = Clock.getBytecodesLeft();
         for (int i = COMM_ARRAY_SIZE; --i >= 0;) {
             commArray[i] = rc.readSharedArray(i);
         }
-        int aft = Clock.getBytecodesLeft();
+//        int aft = Clock.getBytecodesLeft();
     }
 
     final public static int MASK1 = 1;
@@ -207,6 +231,9 @@ public class Comms {
         if (msgInfo == 0) { // empty message
             return;
         }
+        // remove 'used' bit
+        msgInfo -= 1 << 15;
+
         switch (sectionID) {
             case ALLY_ARCHON_SECTION_ID:
                 readAllyArchon(msgInfo, msgIndex);
@@ -218,7 +245,7 @@ public class Comms {
                 // todo
                 break;
             case REPORT_RESOURCE_SECTION_ID:
-                // todo
+                readReportResource(msgInfo);
                 break;
             case REPORT_ENEMY_SECTION_ID:
                 readReportEnemy(msgInfo);
@@ -312,6 +339,31 @@ public class Comms {
         readMessageSection(ALLY_ARCHON_SECTION_ID, ALLY_ARCHON_SECTION_OFFSET, ALLY_ARCHON_SECTION_SIZE);
     }
 
+    /*
+    0-7 | Zone
+    8-9 | Status
+     */
+    public static void writeReportResource(int zx, int zy, int status) throws GameActionException {
+        log("Writing 'Report Resource' message " + zx + " " + zy + " s:" + status);
+
+        int msg = zone2bits(zx, zy);
+        msg += status << 8;
+
+        writeToEmptyCell(msg, REPORT_RESOURCE_SECTION_OFFSET, REPORT_RESOURCE_SECTION_SIZE);
+    }
+
+    public static void readReportResource(int msgInfo) throws GameActionException {
+        int[] zone = bits2zone(msgInfo & ZONE_POS_MASK);
+        int status = msgInfo >>> 8;
+        log("Resource report at " + zone[0] + " " + zone[1] + " " + status);
+
+        zoneResourceStatus[zone[0]][zone[1]] = status;
+    }
+
+    public static void readReportResourceSection() throws GameActionException {
+        readMessageSection(REPORT_RESOURCE_SECTION_ID, REPORT_RESOURCE_SECTION_OFFSET, REPORT_RESOURCE_SECTION_SIZE);
+    }
+
     public static void writeReportEnemy(MapLocation loc, RobotType rt) throws GameActionException {
         log("Writing 'Report Enemy' message " + loc + " " + rt);
 
@@ -326,7 +378,7 @@ public class Comms {
         RobotType rt = int2rt((msgInfo >> 12) & MASK3);
 
         reportedEnemyLocs[reportedEnemyCount++] = loc;
-        log("Reported enemy at " + loc + " " + rt);
+        log("Enemy report at " + loc + " " + rt);
     }
 
     public static MapLocation[] reportedEnemyLocs;

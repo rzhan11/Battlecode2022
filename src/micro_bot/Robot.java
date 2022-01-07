@@ -6,6 +6,7 @@ import static battlecode.common.RobotType.*;
 import static micro_bot.Comms.*;
 import static micro_bot.Debug.*;
 import static micro_bot.Nav.*;
+import static micro_bot.Resource.*;
 import static micro_bot.Utils.*;
 
 public abstract class Robot extends Constants {
@@ -73,6 +74,9 @@ public abstract class Robot extends Constants {
         // init comms
 //        Section.initSections();
 
+        // init resource zone
+        Resource.initResources();
+
 
 
 
@@ -85,6 +89,8 @@ public abstract class Robot extends Constants {
      */
 
     public static MapLocation here;
+    public static int myZoneX;
+    public static int myZoneY;
     public static int roundNum;
     public static int age;
 
@@ -119,9 +125,13 @@ public abstract class Robot extends Constants {
                 Archon.myArchonIndex = Comms.findEmptyCell(ALLY_ARCHON_SECTION_OFFSET, ALLY_ARCHON_SECTION_SIZE);
             }
             Comms.writeAllyArchon(here, Archon.myArchonIndex, true);
+        }
 
+        // read comms relevant to this troop
+        readRelevantComms();
 
-            // clear message board on odd rounds
+        // clear message board on odd rounds
+        if (myType == ARCHON) {
             if (roundNum != spawnRound) {
                 if (roundNum % 2 == 1 && Archon.isPrimaryArchon()) {
                     Comms.clearMessageBoard();
@@ -129,11 +139,11 @@ public abstract class Robot extends Constants {
             }
         }
 
-        Comms.readAllyArchonSection();
+        /* make relevant comm reports */
+        reportSensedEnemies(); // report enemies
 
-        // report enemies
-        reportSensedEnemies();
-
+        // report resources
+        reportResources();
 
         printBuffer();
     }
@@ -142,7 +152,7 @@ public abstract class Robot extends Constants {
     These updates should be cheap and independent of other updates
      */
     public static void updateBasicInfo() throws GameActionException {
-        here = rc.getLocation();
+        updatePositionInfo();
         roundNum = rc.getRoundNum();
         age = roundNum - spawnRound;
 
@@ -165,13 +175,139 @@ public abstract class Robot extends Constants {
         printBuffer();
     }
 
+    public static void updatePositionInfo() throws GameActionException {
+        here = rc.getLocation();
+        myZoneX = here.x / ZONE_SIZE;
+        myZoneY = here.y / ZONE_SIZE;
+    }
+
+    public static void readRelevantComms() throws GameActionException {
+        Comms.readAllyArchonSection();
+        Comms.readReportResourceSection();
+    }
+
     public static void reportSensedEnemies() throws GameActionException {
         // report one sensed enemy
         if (sensedEnemies.length > 0) {
-            RobotInfo ri = sensedEnemies[0];
+            RobotInfo ri = sensedEnemies[randInt(sensedEnemies.length)];
             Comms.writeReportEnemy(ri.location, ri.type);
         }
+    }
 
+    /*
+    Reporting resource zone information
+     */
+    public static void reportResources() throws GameActionException {
+        if (myType == LABORATORY) {
+            return;
+        }
+        if (myType.bytecodeLimit <= 7500 && roundNum == spawnRound) {
+            return;
+        }
+        updateResourceZoneStatus(myZoneX, myZoneY); // report resource zone updates
+        updateResourceZoneStatusEdges(); // report resource zone updates for edge zones
+        updateResourceZoneStatusSpeculative();
+    }
+
+    /*
+    Updates resource zone status of given resource zone (assumes can see it)
+     */
+    public static void updateResourceZoneStatus(int zx, int zy) throws GameActionException {
+        int[] zoneBounds = getZoneLocBounds(zx, zy);
+        // check tiles for resources
+
+        int oldStatus = zoneResourceStatus[zx][zy];
+
+        zoneResourceStatus[zx][zy] = ZONE_EMPTY_FLAG; // set to empty mine
+        for (int i = zoneBounds[0]; i <= zoneBounds[1]; i++) {
+            for (int j = zoneBounds[2]; j <= zoneBounds[3]; j++) {
+                MapLocation loc = new MapLocation(i, j);
+                if (rc.senseLead(loc) > 0) {
+                    zoneResourceStatus[zx][zy] = ZONE_MINE_FLAG;
+                    break;
+                }
+            }
+        }
+
+        if (oldStatus != zoneResourceStatus[zx][zy]) {
+            // todo: delay reports when young
+            writeReportResource(zx, zy, zoneResourceStatus[zx][zy]);
+        }
+
+    }
+
+
+    /*
+    Tries to update resource zone status for adjacent zones (if they are unknown)
+     */
+    public static int[][] edgeZoneDeltas = new int[][] {{0, 1}, {1, 0}, {1, 1}};
+    public static void updateResourceZoneStatusEdges() throws GameActionException {
+
+        for (int i = edgeZoneDeltas.length; --i >= 0;) {
+            int[] delta = edgeZoneDeltas[i];
+            int zx = myZoneX + delta[0];
+            int zy = myZoneY + delta[1];
+            if (canSeeZone(zx, zy) && zoneResourceStatus[zx][zy] == ZONE_UNKNOWN_FLAG) {
+                updateResourceZoneStatus(zx, zy);
+            }
+        }
+
+    }
+
+    /*
+    Tries to update resource zone status of all detected lead locations
+     */
+    public static void updateResourceZoneStatusSpeculative() throws GameActionException {
+        if (myType.bytecodeLimit <= 7500 && roundNum == spawnRound) {
+            return;
+        }
+        MapLocation[] visibleLeadLocs = rc.senseNearbyLocationsWithLead(myVisionRadius);
+
+        // limit number of searched locs if low on bytecode
+        int maxSearchCount;
+        switch(myType.bytecodeLimit) {
+            case 5000:
+                maxSearchCount = 0;
+                break;
+            case 7500:
+                maxSearchCount = 16;
+                break;
+            case 10000:
+                maxSearchCount = 32;
+                break;
+            case 20000:
+                maxSearchCount = 64;
+                break;
+            default:
+                maxSearchCount = 0;
+                logi("WARNING: 'updateResourceZoneStatusSpeculative' Unexpected bytecode limit " + myType.bytecodeLimit);
+
+        }
+
+        int numSearched = Math.min(maxSearchCount, visibleLeadLocs.length);
+
+        // search through lead locs
+        for (int i = numSearched; --i >= 0;) {
+            MapLocation loc = visibleLeadLocs[i];
+            int zx = loc.x / ZONE_SIZE;
+            int zy = loc.y / ZONE_SIZE;
+            if (zoneResourceStatus[zx][zy] != ZONE_MINE_FLAG) {
+                zoneResourceStatus[zx][zy] = ZONE_MINE_FLAG;
+                writeReportResource(zx, zy, ZONE_MINE_FLAG);
+            }
+        }
+
+        // search last index as well (first/last indices are more likely to be unique zones)
+        if (visibleLeadLocs.length > 0) {
+            int i = visibleLeadLocs.length - 1;
+            MapLocation loc = visibleLeadLocs[i];
+            int zx = loc.x / ZONE_SIZE;
+            int zy = loc.y / ZONE_SIZE;
+            if (zoneResourceStatus[zx][zy] != ZONE_MINE_FLAG) {
+                zoneResourceStatus[zx][zy] = ZONE_MINE_FLAG;
+                writeReportResource(zx, zy, ZONE_MINE_FLAG);
+            }
+        }
     }
 
     public static MapLocation exploreLoc = null;
