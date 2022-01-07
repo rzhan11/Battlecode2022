@@ -47,7 +47,7 @@ public class Soldier extends Robot {
             RobotInfo[] closeEnemies = rc.senseNearbyRobots(SOLDIER.actionRadiusSquared, them);
             MapLocation closestEnemySoldier = null;
             int bestDist = P_INF;
-            for (int i = closeEnemies.length; --i >= 0;) {
+            for (int i = closeEnemies.length; --i >= 0; ) {
                 RobotInfo ri = closeEnemies[i];
                 if (ri.type == SOLDIER) {
                     int dist = here.distanceSquaredTo(ri.location);
@@ -60,6 +60,18 @@ public class Soldier extends Robot {
 
             if (closestEnemySoldier != null) {
                 Nav.fuzzyAway(closestEnemySoldier);
+                return;
+            }
+        }
+
+        // if soldier close to archon but outside of 2 unit radius
+        // randomly choose some to keep on guard
+        // ideas: see if moving this chunk around before/after other ifs is better
+        for (int i = allyArchonLocs.length; --i >= 0;) {
+            if (isAllyArchonLive[i]
+                    && here.isWithinDistanceSquared(allyArchonLocs[i],25)
+                    && !here.isWithinDistanceSquared(allyArchonLocs[i], 4)
+                    && random() > 0.1) {
                 return;
             }
         }
