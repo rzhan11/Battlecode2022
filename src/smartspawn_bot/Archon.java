@@ -1,6 +1,7 @@
 package smartspawn_bot;
 
 import battlecode.common.*;
+
 import static battlecode.common.RobotType.*;
 
 import static smartspawn_bot.Comms.*;
@@ -21,8 +22,6 @@ public class Archon extends Robot {
 
     // things to do on turn 1 of existence
     public static void firstTurnSetup() throws GameActionException {
-        // first turn comms
-
     }
 
     public static RobotType[] potentialSpawns = new RobotType[]{MINER, SOLDIER, BUILDER};
@@ -56,8 +55,10 @@ public class Archon extends Robot {
             if (roundNum % 50 == 1) { // common explore update frequency
                 Comms.writeCommonExploreSection();
             }
+
         }
 
+        updateMinerGoal();
 
         if (reportedEnemyCount > 0) {
             madeContact = true;
@@ -78,6 +79,10 @@ public class Archon extends Robot {
             return;
         }
 
+        if (sensedEnemies.length > 0) {
+            nextSpawnType = SOLDIER;
+        }
+
         // rotate through different spawns
         boolean shouldTrySpawn = checkTrySpawn();
         log("should " + shouldTrySpawn + " " + rc.getTeamLeadAmount(us) + " " + nextSpawnType);
@@ -88,6 +93,7 @@ public class Archon extends Robot {
                 Direction dir = tryBuild(nextSpawnType, bestDir);
                 if (dir != null) {
                     pickNextSpawnType();
+                    log("hi " + nextSpawnType);
                     numSpawns++;
                     archonSpawnBit[myArchonIndex] = 1 - archonSpawnBit[myArchonIndex];
                     return;
@@ -149,29 +155,140 @@ public class Archon extends Robot {
     }
 
     public static void pickNextSpawnType() {
-        // only spawn miner and soldier
-
-//        if (madeContact) {
-//            nextSpawnType = (numSpawns % 3 != 0) ? SOLDIER : MINER;
-//        } else {
-//            nextSpawnType = (numSpawns % 5 == 0) ? SOLDIER : MINER;
-//        }
-
-        nextSpawnType = (numSpawns % 2 == 0) ? MINER : SOLDIER;
-
-        // builder order
-        if (rc.getTeamLeadAmount(us) > 500 * rc.getArchonCount()) { // build builder if rich
+        // build builder if rich
+        if (rc.getTeamLeadAmount(us) > 500 * rc.getArchonCount()) {
             if (random() < 0.2) {
                 nextSpawnType = BUILDER;
-            } else {
-                if (random() < 0.8) {
-                    nextSpawnType = SOLDIER;
-                } else {
-                    nextSpawnType = MINER;
-                }
+                return;
             }
         }
 
+        if (getUnitCount(MINER) >= rc.getArchonCount() * 20) {
+            nextSpawnType = SOLDIER;
+            return;
+        }
+
+
+        if (getUnitCount(MINER) < minerGoal) { // few miners
+            if (madeContact) {
+                if (random() < 0.5) {
+                    nextSpawnType = MINER;
+                } else {
+                    nextSpawnType = SOLDIER;
+                }
+            } else {
+                if (random() < 0.75) {
+                    nextSpawnType = MINER;
+                } else {
+                    nextSpawnType = SOLDIER;
+                }
+            }
+        } else { // many miners
+            if (random() < 0) {
+                nextSpawnType = MINER;
+            } else {
+                nextSpawnType = SOLDIER;
+            }
+        }
+
+
+    }
+
+    public static void updateResourceZoneCount(int oldStatus, int newStatus, int zx, int zy) {
+        log("update " + oldStatus + " " + newStatus + " " + zx + " " + zy);
+        if (oldStatus == newStatus) {
+            return;
+        }
+
+
+        // decrement unknown/frontier
+        switch (oldStatus) {
+            case ZONE_UNKNOWN_FLAG:
+                if (oldStatus == ZONE_UNKNOWN_FLAG) {
+                    unknownCount--;
+                    if (isFrontierZone[zx][zy]) {
+                        unknownFrontierCount--;
+                    }
+                    isFrontierZone[zx][zy] = false;
+
+                    // increment new frontiers
+                    // cardinal
+                    if (zx + 1 < ZONE_XNUM) {
+                        // right
+                        if (zoneResourceStatus[zx + 1][zy] == ZONE_UNKNOWN_FLAG && !isFrontierZone[zx + 1][zy]) {
+                            isFrontierZone[zx + 1][zy] = true;
+                            unknownFrontierCount++;
+                        }
+                        // right-up
+                        if (zy + 1 < ZONE_YNUM && zoneResourceStatus[zx + 1][zy + 1] == ZONE_UNKNOWN_FLAG && !isFrontierZone[zx + 1][zy + 1]) {
+                            isFrontierZone[zx + 1][zy + 1] = true;
+                            unknownFrontierCount++;
+                        }
+                        // right-down
+                        if (zy > 0 && checkValidZone(zx + 1, zy - 1) && zoneResourceStatus[zx + 1][zy - 1] == ZONE_UNKNOWN_FLAG && !isFrontierZone[zx + 1][zy - 1]) {
+                            isFrontierZone[zx + 1][zy - 1] = true;
+                            unknownFrontierCount++;
+                        }
+                    }
+                    if (zx > 0) {
+                        if (checkValidZone(zx - 1, zy) && zoneResourceStatus[zx - 1][zy] == ZONE_UNKNOWN_FLAG && !isFrontierZone[zx - 1][zy]) {
+                            isFrontierZone[zx - 1][zy] = true;
+                            unknownFrontierCount++;
+                        }
+                        if (zy + 1 < ZONE_YNUM && zoneResourceStatus[zx - 1][zy + 1] == ZONE_UNKNOWN_FLAG && !isFrontierZone[zx - 1][zy + 1]) {
+                            isFrontierZone[zx - 1][zy + 1] = true;
+                            unknownFrontierCount++;
+                        }
+                        if (zy > 0 && zoneResourceStatus[zx - 1][zy - 1] == ZONE_UNKNOWN_FLAG && !isFrontierZone[zx - 1][zy - 1]) {
+                            isFrontierZone[zx - 1][zy - 1] = true;
+                            unknownFrontierCount++;
+                        }
+                    }
+                    // up
+                    if (zy + 1 < ZONE_YNUM && zoneResourceStatus[zx][zy + 1] == ZONE_UNKNOWN_FLAG && !isFrontierZone[zx][zy + 1]) {
+                        isFrontierZone[zx][zy + 1] = true;
+                        unknownFrontierCount++;
+                    }
+                    // down
+                    if (zy > 0 && zoneResourceStatus[zx][zy - 1] == ZONE_UNKNOWN_FLAG && !isFrontierZone[zx][zy - 1]) {
+                        isFrontierZone[zx][zy - 1] = true;
+                        unknownFrontierCount++;
+                    }
+                }
+                break;
+            case ZONE_EMPTY_FLAG:
+                break;
+            case ZONE_MINE_FLAG:
+                mineCount--;
+                break;
+            default:
+                logi("WARNING: 'updateResourceZoneCount' Unexpected zone flag1! " + zoneResourceStatus[zx][zy]);
+        }
+
+
+        switch (newStatus) {
+            case ZONE_UNKNOWN_FLAG:
+                logi("WARNING: 'updateResourceZoneCount' Zone flag should not be possible " + zoneResourceStatus[zx][zy]);
+                break;
+            case ZONE_EMPTY_FLAG:
+                break;
+            case ZONE_MINE_FLAG:
+                mineCount++;
+                break;
+            default:
+                logi("WARNING: 'updateResourceZoneCount' Unexpected zone flag2! " + zoneResourceStatus[zx][zy]);
+        }
+    }
+
+    public static int minerGoal;
+
+    public static void updateMinerGoal() {
+        log("unknownCount " + unknownCount);
+        log("unknownFrontierCount " + unknownFrontierCount);
+        log("mineCount " + mineCount);
+
+        minerGoal = unknownFrontierCount + mineCount;
+        minerGoal = Math.max(minerGoal, 20);
     }
 
     public static Direction getBuildDir() throws GameActionException {

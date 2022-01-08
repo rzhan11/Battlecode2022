@@ -155,9 +155,10 @@ public class Nav {
         int bestRubble = P_INF;
         for (int i = DIRS.length; --i >= 0;) {
             Direction dir = DIRS[i];
+            MapLocation loc = rc.adjacentLocation(dir);
             if (checkDirMoveable(dir)) {
-                if (center.isWithinDistanceSquared(here.add(dir), radius)) {
-                    int rubble = rc.senseRubble(here);
+                if (center.isWithinDistanceSquared(loc, radius)) {
+                    int rubble = rc.senseRubble(loc);
                     if (rubble < bestRubble) {
                         bestDir = dir;
                         bestRubble = rubble;
@@ -166,7 +167,9 @@ public class Nav {
             }
         }
 
-        if (bestRubble < rc.senseRubble(here)) {
+        log("mbt " + bestDir + " " + bestRubble);
+
+        if (bestRubble <= rc.senseRubble(here)) {
             Actions.doMove(bestDir);
             return bestDir;
         } else {
@@ -197,6 +200,7 @@ public class Nav {
 
         Direction bestDir = null;
         double bestRubble = P_INF;
+        double bestDist = P_INF;
         for (int i = 8; --i >= 0;) { // 7->0
             Direction dir = DIRS[i];
             if (checkDirMoveable(dir)) {
@@ -207,6 +211,11 @@ public class Nav {
                     if (rubble < bestRubble) {
                         bestDir = dir;
                         bestRubble = rubble;
+                        bestDist = dist;
+                    } else if (rubble == bestRubble && dist < bestDist) {
+                        bestDir = dir;
+                        bestRubble = rubble;
+                        bestDist = dist;
                     }
                 }
             }

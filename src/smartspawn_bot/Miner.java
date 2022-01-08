@@ -48,6 +48,14 @@ public class Miner extends Robot {
             return;
         }
 
+        if (wouldMineLoc != null) {
+            log("wml " + wouldMineLoc);
+            if (rc.senseLead(wouldMineLoc) > 1 || rc.senseGold(wouldMineLoc) > 0) {
+                Direction moveDir = Nav.moveBetterTile(wouldMineLoc, myActionRadius);
+                return;
+            }
+        }
+
         // search surrounding tiles for lead
         {
             MapLocation[] visibleLeadLocs = rc.senseNearbyLocationsWithLead(myVisionRadius);
@@ -62,15 +70,22 @@ public class Miner extends Robot {
                 if (rc.senseLead(loc) > 1) {
                     int dist = here.distanceSquaredTo(loc);
                     if (dist < bestDist) {
-                        bestLoc = loc;
-                        bestDist = dist;
+                        // only go to lead tiles in zone
+                        int[] zone = loc2Zone(loc);
+                        int lastRound = zoneVisitLastRound[zone[0]][zone[1]];
+                        if ((myZoneX == zone[0] && myZoneY == zone[1]) ||
+                            (lastRound == 0 || roundNum - lastRound > ZONE_REVISIT_WAIT)) {
+                            // only mine lead in same zone/old zones
+                            bestLoc = loc;
+                            bestDist = dist;
+                        }
                     }
                 }
             }
 
             if (bestLoc != null) {
-                Direction moveDir = Nav.fuzzyTo(bestLoc);
-                rc.setIndicatorString("going to " + bestLoc);
+                Direction moveDir = Nav.fuzzyToSimple(bestLoc);
+                rc.setIndicatorString("going to lead@" + bestLoc);
                 Debug.drawLine(here, bestLoc, RED);
                 return;
             }
@@ -79,13 +94,18 @@ public class Miner extends Robot {
         // go towards unknown zones
 
         // check if target zones are known
-        if (targetZoneLoc != null && zoneResourceStatus[targetZone[0]][targetZone[1]] != ZONE_UNKNOWN_FLAG) {
-            targetZone = null;
-            targetZoneLoc = null;
+        if (targetZoneLoc != null) {
+            if (!checkGoodResourceZone(targetZone[0], targetZone[1])) {
+                resetTargetResourceZone();
+            }
         }
 
+
         if (targetZoneLoc == null) {
+            int a = Clock.getBytecodesLeft();
             updateResourceZoneTargets();
+            int b = Clock.getBytecodesLeft();
+            log("bytecode 'u_rz_tar' " + (a - b));
         }
 
         // if no visible lead, go to unknown zone
@@ -162,6 +182,9 @@ public class Miner extends Robot {
     public static int[] targetZone = null;
     public static MapLocation targetZoneLoc = null;
 
+    final public static int ZONE_REVISIT_WAIT = 100;
+    final public static int ZONE_DANGER_WAIT = 25;
+
     public static void updateResourceZoneTargets() {
         int[] unknownZone = null;
         MapLocation unknownZoneLoc = null;
@@ -177,29 +200,46 @@ public class Miner extends Robot {
             if (!checkValidZone(zx, zy)) {
                 continue;
             }
-            switch (zoneResourceStatus[zx][zy]) {
-                case ZONE_UNKNOWN_FLAG:
+            // skip recent danger zones
+            if (zoneDangerLastRound[zx][zy] != 0 && roundNum - zoneDangerLastRound[zx][zy] <= ZONE_DANGER_WAIT) {
+                continue;
+            }
+            if (checkGoodResourceZone(zx, zy)) {
+                if (zoneResourceStatus[zx][zy] == ZONE_UNKNOWN_FLAG) {
                     unknownZone = new int[] {zx, zy};
                     unknownZoneLoc = zone2Loc(zx, zy);
-                    break;
-                case ZONE_EMPTY_FLAG:
+                } else {
                     mineZone = new int[] {zx, zy};
                     mineZoneLoc = zone2Loc(zx, zy);
-                    break;
-                case ZONE_MINE_FLAG:
-                    break;
-                default:
-                    logi("WARNING: 'updateResourceZoneTargets' Unexpected zone flag! " + zoneResourceStatus[zx][zy]);
+                }
             }
         }
 
         if (unknownZoneLoc != null) {
             targetZone = unknownZone;
             targetZoneLoc = unknownZoneLoc;
-//        } else {
-//            targetZone = mineZone;
-//            targetZoneLoc = mineZoneLoc;
+        } else if (mineZoneLoc != null) {
+            targetZone = mineZone;
+            targetZoneLoc = mineZoneLoc;
         }
+    }
+
+    public static boolean checkGoodResourceZone(int zx, int zy) {
+        switch (zoneResourceStatus[zx][zy]) {
+            case ZONE_UNKNOWN_FLAG:
+                return true;
+            case ZONE_EMPTY_FLAG:
+                return false;
+            case ZONE_MINE_FLAG:
+                // skip recently visited mining zones
+                if (zoneVisitLastRound[zx][zy] != 0 && roundNum - zoneVisitLastRound[zx][zy] <= ZONE_REVISIT_WAIT) {
+                    return false;
+                }
+                return true;
+            default:
+                logi("WARNING: 'checkResetTargetResourceZone' Unexpected zone flag! " + zoneResourceStatus[zx][zy]);
+        }
+        return false;
     }
 
     public static void resetTargetResourceZone() {
@@ -207,7 +247,11 @@ public class Miner extends Robot {
         targetZone = null;
     }
 
+    public static MapLocation wouldMineLoc;
+
     public static void tryMine() throws GameActionException {
+        wouldMineLoc = null;
+
         // mine lead if adjacent to it
         for (int i = ALL_DIRS.length; --i >= 0;) {
             MapLocation loc = here.add(ALL_DIRS[i]);
@@ -217,6 +261,7 @@ public class Miner extends Robot {
             int curGold = rc.senseGold(loc);
             while (curGold > 0) {
                 if (!rc.isActionReady()) {
+                    wouldMineLoc = loc;
                     return;
                 }
                 Actions.doMineGold(loc);
@@ -232,6 +277,7 @@ public class Miner extends Robot {
             int curLead = rc.senseLead(loc);
             while (curLead > 1) {
                 if (!rc.isActionReady()) {
+                    wouldMineLoc = loc;
                     return;
                 }
                 Actions.doMineLead(loc);

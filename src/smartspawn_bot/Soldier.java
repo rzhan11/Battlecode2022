@@ -25,7 +25,6 @@ public class Soldier extends Robot {
     // code run each turn
     public static void turn() throws GameActionException {
         // put role-specific updates here
-        Comms.readReportEnemySection();
 
 
         tryAttack();
@@ -41,7 +40,7 @@ public class Soldier extends Robot {
         }
 
         // if in range of enemy and attack is on cooldown, move away from enemy soldiers
-        if (!rc.isActionReady()) {// || !checkShouldFight()) {
+        if (!rc.isActionReady() && checkEnemySoldier()) {// || !checkShouldFight()) {
             Direction moveDir = runAwayFromEnemy();
             rc.setIndicatorString("flee");
             return moveDir;
@@ -82,14 +81,12 @@ public class Soldier extends Robot {
 
         // go to reported enemies
         {
+            if (targetEnemyLoc != null) {
+                checkResetTargetEnemyLoc();
+            }
             // find new target if needed
             if (targetEnemyLoc == null) {
                 findNewTargetEnemyLoc();
-            } else {
-                // if we are within sensing range, but reach this code, that means the enemy is gone
-                if (rc.canSenseLocation(targetEnemyLoc)) {
-                    findNewTargetEnemyLoc();
-                }
             }
 
             // go towards target, if we have one
@@ -171,6 +168,16 @@ public class Soldier extends Robot {
             Direction moveDir = Nav.fuzzyTo(homeLoc);
             return;
         }
+    }
+
+    public static boolean checkEnemySoldier() {
+        for (int i = sensedEnemies.length; --i >= 0;) {
+            RobotInfo ri = sensedEnemies[i];
+            if (ri.type == SOLDIER) {
+                return true;
+            }
+        }
+        return false;
     }
 
     public static boolean checkShouldFight() {
@@ -337,6 +344,18 @@ public class Soldier extends Robot {
         // prioritize lower health
         score += 1000 - ri.health;
         return score;
+    }
+
+    public static void checkResetTargetEnemyLoc() {
+        // if we are within sensing range, but reach this code, that means the enemy is gone
+        if (here.isWithinDistanceSquared(targetEnemyLoc, myVisionRadius)) {
+            resetTargetEnemyLoc();
+            return;
+        }
+    }
+
+    public static void resetTargetEnemyLoc() {
+        targetEnemyLoc = null;
     }
 
     public static void findNewTargetEnemyLoc() {

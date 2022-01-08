@@ -126,6 +126,23 @@ public class Comms {
     final public static int MASK8 = 255;
     final public static int MASK15 = 32767;
 
+    final public static int BIT0 = 1;
+    final public static int BIT1 = 2;
+    final public static int BIT2 = 4;
+    final public static int BIT3 = 8;
+    final public static int BIT4 = 16;
+    final public static int BIT5 = 32;
+    final public static int BIT6 = 64;
+    final public static int BIT7 = 128;
+    final public static int BIT8 = 256;
+    final public static int BIT9 = 512;
+    final public static int BIT10 = 1024;
+    final public static int BIT11 = 2048;
+    final public static int BIT12 = 4096;
+    final public static int BIT13 = 8192;
+    final public static int BIT14 = 16384;
+    final public static int BIT15 = 32768;
+
     public static int getBitMask(int left, int right) {
         return ((1 << (right - left)) - 1) << left;
     }
@@ -220,7 +237,7 @@ public class Comms {
      */
     public static void writeCell(int data, int cellIndex) throws GameActionException {
         tlog("Write success " + cellIndex + " " + data);
-        data += 1 << 15; // used bit
+        data += BIT15; // used bit
 
         commArray[cellIndex] = data;
         rc.writeSharedArray(cellIndex, data);
@@ -245,7 +262,7 @@ public class Comms {
             return;
         }
         // remove 'used' bit
-        msgInfo -= 1 << 15;
+        msgInfo -= BIT15;
 
         switch (sectionID) {
             case ALLY_ARCHON_SECTION_ID:
@@ -325,19 +342,20 @@ public class Comms {
     0-11 | Location
     12 | Turn parity
     13 | Live
+    14 | Spawn bit
      */
     public static void writeAllyArchon(MapLocation loc, int archonIndex, boolean live) throws GameActionException {
         log("Writing 'Ally Archon' " + loc + " " + archonIndex + " " + live);
 
         int msg = loc2bits(loc);
         if (roundNum % 2 == 1) {
-            msg += 1 << 12; // initial turn parity (should be odd)
+            msg += BIT12; // initial turn parity (should be odd)
         }
         if (live) {
-            msg += 1 << 13; // live
+            msg += BIT13; // live
         }
         if (Archon.archonSpawnBit[archonIndex] == 1) {
-            msg += 1 << 14;
+            msg += BIT14;
         }
 
         writeCell(msg, ALLY_ARCHON_SECTION_OFFSET + archonIndex);
@@ -392,6 +410,9 @@ public class Comms {
         int status = msgInfo >>> 8;
 //        log("Reading 'Report Resource' " + zone[0] + " " + zone[1] + " s:" + status);
 
+        if (myType == ARCHON) {
+            Archon.updateResourceZoneCount(zoneResourceStatus[zone[0]][zone[1]], status, zone[0], zone[1]);
+        }
         zoneResourceStatus[zone[0]][zone[1]] = status;
     }
 
@@ -426,6 +447,42 @@ public class Comms {
 
             msg = (msg + zoneResourceStatus[zx][zy]) << BROADCAST_RESOURCE_SHIFT;
 
+            // draw resource zone
+            {
+                MapLocation loc = new MapLocation(zx * ZONE_SIZE, zy * ZONE_SIZE);
+                int[] color = PINK;
+                switch (zoneResourceStatus[zx][zy]) {
+                    case ZONE_UNKNOWN_FLAG:
+                        color = BLACK;
+                        break;
+                    case ZONE_EMPTY_FLAG:
+                        color = RED;
+                        break;
+                    case ZONE_MINE_FLAG:
+                        color = GREEN;
+                        break;
+
+                    default:
+                        logi("WARNING: 'displayZoneStatus' Unknown zone status! " + zoneResourceStatus[zx][zy]);
+                }
+                Debug.drawDot(loc, color);
+
+            }
+
+            // draw danger zone
+            {
+                MapLocation loc = new MapLocation(zx * ZONE_SIZE + 1, zy * ZONE_SIZE + 1);
+                int[] color = PINK;
+                if (zoneDangerLastRound[zx][zy] == 0) {
+                    color = GRAY;
+                } else if (roundNum - zoneDangerLastRound[zx][zy] <= Miner.ZONE_DANGER_WAIT) {
+                    color = PINK;
+                } else {
+                    color = YELLOW;
+                }
+                Debug.drawDot(loc, color);
+            }
+
             zoneIndex++;
         }
         msg = msg >> BROADCAST_RESOURCE_SHIFT;
@@ -446,7 +503,12 @@ public class Comms {
 
             int zx = zoneIndex % ZONE_XNUM;
             int zy = zoneIndex / ZONE_XNUM;
-            zoneResourceStatus[zx][zy] = msgInfo & BROADCAST_RESOURCE_MASK;
+            int status = msgInfo & BROADCAST_RESOURCE_MASK;
+
+            if (myType == ARCHON) {
+                Archon.updateResourceZoneCount(zoneResourceStatus[zx][zy], status, zx, zy);
+            }
+            zoneResourceStatus[zx][zy] = status;
 
             msgInfo = msgInfo >> BROADCAST_RESOURCE_SHIFT;
         }
@@ -459,7 +521,7 @@ public class Comms {
             Comms.writeBroadcastResource(i);
         }
         int b = Clock.getBytecodesLeft();
-        log("bytecode11 " + (a - b));
+        log("bytecode 'w_b_r' " + (a - b));
     }
 
     public static void readBroadcastResourceSection() throws GameActionException {
@@ -469,7 +531,7 @@ public class Comms {
         int a = Clock.getBytecodesLeft();
         readMessageSection(BROADCAST_RESOURCE_SECTION_ID, BROADCAST_RESOURCE_SECTION_OFFSET, BROADCAST_RESOURCE_SECTION_SIZE);
         int b = Clock.getBytecodesLeft();
-        log("bytecode " + (a - b));
+        log("bytecode 'r_b_r' " + (a - b));
     }
 
     /*
@@ -482,34 +544,64 @@ public class Comms {
         return (startIndex + msgIndex * BROADCAST_RESOURCE_CELL_DENSITY) % ZONE_TOTAL_NUM;
     }
 
-    public static void writeReportEnemy(MapLocation loc, RobotType rt) throws GameActionException {
-        log("Writing 'Report Enemy' " + loc + " " + rt);
+    /*
+    0-7 | Zone
+    8 | Danger (enemy can attack)
+     */
+    public static void writeReportEnemy(MapLocation loc, boolean hasDanger) throws GameActionException {
+        log("Writing 'Report Enemy' " + loc + " " + hasDanger);
 
-        int msg = loc2bits(loc);
-        msg += rt2int(rt) << 12;
+        int a = Clock.getBytecodesLeft();
+        int zx = loc.x / ZONE_SIZE;
+        int zy = loc.y / ZONE_SIZE;
 
+        int msg = zone2bits(zx, zy);
+        if (hasDanger) {
+            msg += BIT8;
+        }
+
+        int b = Clock.getBytecodesLeft();
+        log("bytecode 'wen' " + (a - b) + " " + reportedEnemyCount);
         writeToEmptyCell(msg, REPORT_ENEMY_SECTION_OFFSET, REPORT_ENEMY_SECTION_SIZE);
     }
 
     public static void readReportEnemy(int msgInfo) throws GameActionException {
-        MapLocation loc = bits2loc(msgInfo & LOC_MASK);
-        RobotType rt = int2rt((msgInfo >> 12) & MASK3);
-//        log("Reading 'Report Enemy' " + loc + " " + rt);
+        int[] zone = bits2zone(msgInfo & ZONE_POS_MASK);
+//        int dangerBit = ;
+        log("Reading 'Report Enemy' " + zone[0] + " " + zone[1]);
 
-        reportedEnemyLocs[reportedEnemyCount++] = loc;
+        // danger bit
+        if (((msgInfo >> 8) & 1) == 1) {
+            zoneDangerLastRound[zone[0]][zone[1]] = roundNum;
+        }
+
+        if (addToReportedEnemyLocs) {
+            MapLocation loc = zone2Loc(zone[0], zone[1]);
+            reportedEnemyLocs[reportedEnemyCount++] = loc;
+        }
     }
 
     public static MapLocation[] reportedEnemyLocs;
     public static int reportedEnemyCount;
+    public static boolean addToReportedEnemyLocs;
 
-    public static void readReportEnemySection() throws GameActionException {
-//        int a = Clock.getBytecodesLeft();
-        reportedEnemyLocs = new MapLocation[REPORT_ENEMY_SECTION_SIZE];
-        reportedEnemyCount = 0;
+    public static void readReportEnemySection(boolean addToList) throws GameActionException {
+        int a = Clock.getBytecodesLeft();
+        addToReportedEnemyLocs = addToList;
+        if (addToReportedEnemyLocs) {
+            reportedEnemyLocs = new MapLocation[REPORT_ENEMY_SECTION_SIZE];
+            reportedEnemyCount = 0;
 
-        readMessageSection(REPORT_ENEMY_SECTION_ID, REPORT_ENEMY_SECTION_OFFSET, REPORT_ENEMY_SECTION_SIZE);
-//        int b = Clock.getBytecodesLeft();
-//        log("bytecode " + (a - b) + " " + reportedEnemyCount);
+            readMessageSection(REPORT_ENEMY_SECTION_ID, REPORT_ENEMY_SECTION_OFFSET, REPORT_ENEMY_SECTION_SIZE);
+        } else {
+            readMessageSection(REPORT_ENEMY_SECTION_ID, REPORT_ENEMY_SECTION_OFFSET, REPORT_ENEMY_SECTION_SIZE);
+        }
+
+
+
+
+        int b = Clock.getBytecodesLeft();
+        log("bytecode 'en' " + (a - b) + " " + reportedEnemyCount);
     }
 
     public static MapLocation commonExploreLoc = new MapLocation(0, 0);

@@ -1,6 +1,7 @@
 package smartspawn_bot;
 
 import battlecode.common.*;
+import static battlecode.common.RobotType.*;
 
 import static smartspawn_bot.Debug.*;
 import static smartspawn_bot.Map.*;
@@ -63,13 +64,30 @@ public class Zone {
      */
 
     public static int[][] zoneResourceStatus;
+    public static int[][] zoneDangerLastRound;
+    public static int[][] zoneVisitLastRound;
 
-    public static void initResources() {
+    /*
+    Zone counting - archons only
+     */
+    public static int unknownCount;
+    public static int unknownFrontierCount = 0;
+    public static int mineCount = 0;
+    public static boolean[][] isFrontierZone;
+
+    public static void initZones() {
         ZONE_XNUM = (rc.getMapWidth() + ZONE_SIZE - 1) / ZONE_SIZE;
         ZONE_YNUM = (rc.getMapHeight() + ZONE_SIZE - 1) / ZONE_SIZE;
         ZONE_TOTAL_NUM = ZONE_XNUM * ZONE_YNUM;
 
         zoneResourceStatus = new int[ZONE_XNUM][ZONE_YNUM];
+        zoneDangerLastRound = new int[ZONE_XNUM][ZONE_YNUM];
+        zoneVisitLastRound = new int[ZONE_XNUM][ZONE_YNUM];
+
+        if (myType == ARCHON) {
+            unknownCount = ZONE_TOTAL_NUM;
+            isFrontierZone = new boolean[ZONE_XNUM][ZONE_YNUM];
+        }
     }
 
     public static void displayZoneResourceStatus() {

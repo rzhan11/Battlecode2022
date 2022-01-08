@@ -75,7 +75,7 @@ public abstract class Robot extends Constants {
 //        Section.initSections();
 
         // init resource zone
-        Zone.initResources();
+        Zone.initZones();
 
 
 
@@ -151,6 +151,9 @@ public abstract class Robot extends Constants {
         // report unit counts
         Comms.writeAllyUnitCount(myType);
 
+        // update last zone
+        zoneVisitLastRound[myZoneX][myZoneY] = roundNum;
+
         printBuffer();
     }
 
@@ -203,9 +206,8 @@ public abstract class Robot extends Constants {
             Comms.readReportResourceSection();
         }
 
-        if (myType == SOLDIER || myType == ARCHON || myType == WATCHTOWER) {
-            Comms.readReportEnemySection();
-        }
+        boolean addToList = (myType == SOLDIER || myType == ARCHON || myType == WATCHTOWER);
+        Comms.readReportEnemySection(addToList);
     }
 
     public static int getUnitCount(RobotType rt) {
@@ -227,10 +229,19 @@ public abstract class Robot extends Constants {
     }
 
     public static void reportSensedEnemies() throws GameActionException {
+
         // report one sensed enemy
         if (sensedEnemies.length > 0) {
+            boolean hasDanger = false;
+            for (int i = sensedEnemies.length; --i >= 0;) {
+                if (sensedEnemies[i].type.canAttack()) {
+                    hasDanger = true;
+                    break;
+                }
+            }
+
             RobotInfo ri = sensedEnemies[randInt(sensedEnemies.length)];
-            Comms.writeReportEnemy(ri.location, ri.type);
+            Comms.writeReportEnemy(ri.location, hasDanger);
         }
     }
 
@@ -272,6 +283,10 @@ public abstract class Robot extends Constants {
         if (oldStatus != zoneResourceStatus[zx][zy]) {
             // todo: delay reports when young
             writeReportResource(zx, zy, zoneResourceStatus[zx][zy]);
+
+            if (myType == ARCHON) {
+                Archon.updateResourceZoneCount(oldStatus, zoneResourceStatus[zx][zy], zx, zy);
+            }
         }
 
     }
@@ -301,6 +316,7 @@ public abstract class Robot extends Constants {
         if (myType.bytecodeLimit <= 7500 && roundNum == spawnRound) {
             return;
         }
+
         MapLocation[] visibleLeadLocs = rc.senseNearbyLocationsWithLead(myVisionRadius);
 
         // limit number of searched locs if low on bytecode
@@ -332,6 +348,9 @@ public abstract class Robot extends Constants {
             int zx = loc.x / ZONE_SIZE;
             int zy = loc.y / ZONE_SIZE;
             if (zoneResourceStatus[zx][zy] != ZONE_MINE_FLAG) {
+                if (myType == ARCHON) {
+                    Archon.updateResourceZoneCount(zoneResourceStatus[zx][zy], ZONE_MINE_FLAG, zx, zy);
+                }
                 zoneResourceStatus[zx][zy] = ZONE_MINE_FLAG;
                 writeReportResource(zx, zy, ZONE_MINE_FLAG);
             }
@@ -344,6 +363,9 @@ public abstract class Robot extends Constants {
             int zx = loc.x / ZONE_SIZE;
             int zy = loc.y / ZONE_SIZE;
             if (zoneResourceStatus[zx][zy] != ZONE_MINE_FLAG) {
+                if (myType == ARCHON) {
+                    Archon.updateResourceZoneCount(zoneResourceStatus[zx][zy], ZONE_MINE_FLAG, zx, zy);
+                }
                 zoneResourceStatus[zx][zy] = ZONE_MINE_FLAG;
                 writeReportResource(zx, zy, ZONE_MINE_FLAG);
             }

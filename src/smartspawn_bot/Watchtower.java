@@ -22,7 +22,6 @@ public class Watchtower extends Robot {
     // code run each turn
     public static void turn() throws GameActionException {
         // put role-specific updates here
-        Comms.readReportEnemySection();
 
         // decide if we want to change mode
         updateMode();
