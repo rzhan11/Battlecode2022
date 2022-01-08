@@ -42,8 +42,12 @@ public class Archon extends Robot {
 
         // second turn update
 
-        for (int i = 0; i < 4; i++) {
-            log("i " + i + ": " + allyArchonLocs[i] + " " + isAllyArchonLive[i]);
+//        for (int i = 0; i < 4; i++) {
+//            log("i " + i + ": " + allyArchonLocs[i] + " " + isAllyArchonLive[i]);
+//        }
+        for (int i = 0; i < ALLY_UNIT_COUNT_SECTION_SIZE; i++) {
+            RobotType rt = unitCountIndex2Type[i];
+            log("i " + i + ": " + " " + rt + " "  + allyUnitCounts[i]);
         }
 
         if (Archon.isPrimaryArchon()) { // broadcast if is primary archon

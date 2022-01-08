@@ -4,6 +4,7 @@ import battlecode.common.*;
 
 import static battlecode.common.RobotType.*;
 
+import static micro_bot.Debug.logi;
 import static smartspawn_bot.Debug.*;
 import static smartspawn_bot.Zone.*;
 import static smartspawn_bot.Robot.*;
@@ -124,6 +125,7 @@ public class Comms {
     final public static int MASK6 = 63;
     final public static int MASK7 = 127;
     final public static int MASK8 = 255;
+    final public static int MASK15 = 32767;
 
     public static int getBitMask(int left, int right) {
         return ((1 << (right - left)) - 1) << left;
@@ -168,6 +170,10 @@ public class Comms {
     final public static int COMMON_EXPLORE_SECTION_OFFSET = REPORT_ENEMY_SECTION_OFFSET + REPORT_ENEMY_SECTION_SIZE;
     final public static int COMMON_EXPLORE_SECTION_SIZE = 4;
 
+    final public static int ALLY_UNIT_COUNT_SECTION_ID = 7;
+    final public static int ALLY_UNIT_COUNT_SECTION_OFFSET = COMMON_EXPLORE_SECTION_OFFSET + COMMON_EXPLORE_SECTION_SIZE;
+    final public static int ALLY_UNIT_COUNT_SECTION_SIZE = 5;
+
     /*
     Write a message to an empty cell in a given section
     ---
@@ -188,7 +194,7 @@ public class Comms {
     public static int findEmptyCell(int sectionOffset, int sectionSize) throws GameActionException {
         int sectionEnd = sectionOffset + sectionSize;
         for (int i = sectionOffset; i < sectionEnd; i++) {
-            if (readCell(i) < 0) { // write into empty location
+            if (commArray[i] == 0) { // write into empty location
                 return i;
             }
         }
@@ -198,7 +204,7 @@ public class Comms {
     public static int findEmptyCellWithoutDups(int data, int sectionOffset, int sectionSize) throws GameActionException {
         int sectionEnd = sectionOffset + sectionSize;
         for (int i = sectionOffset; i < sectionEnd; i++) {
-            if (readCell(i) < 0) { // write into empty location
+            if (commArray[i] == 0) { // write into empty location
                 return i;
             }
 
@@ -225,7 +231,7 @@ public class Comms {
     Returns message from cell
      */
     public static int readCell(int cellIndex) throws GameActionException {
-        return commArray[cellIndex] - (1 << 15);
+        return commArray[cellIndex] & MASK15;
     }
 
     public static void readMessageSection(int sectionID, int sectionOffset, int sectionSize) throws GameActionException {
@@ -264,6 +270,10 @@ public class Comms {
             case COMMON_EXPLORE_SECTION_ID:
                 readCommonExplore(msgInfo);
                 break;
+            case ALLY_UNIT_COUNT_SECTION_ID:
+                readAllyUnitCount(msgInfo, msgIndex);
+                break;
+
 
             default:
                 logi("ERROR: Unknown sectionID " + sectionID);
@@ -278,8 +288,9 @@ public class Comms {
      */
     public static void clearMessageBoard() throws GameActionException {
         int[][] sectionInfo = new int[][]{
-            {REPORT_RESOURCE_SECTION_OFFSET, REPORT_RESOURCE_SECTION_SIZE},
-            {REPORT_ENEMY_SECTION_OFFSET, REPORT_ENEMY_SECTION_SIZE},
+                {REPORT_RESOURCE_SECTION_OFFSET, REPORT_RESOURCE_SECTION_SIZE},
+                {REPORT_ENEMY_SECTION_OFFSET, REPORT_ENEMY_SECTION_SIZE},
+                {ALLY_UNIT_COUNT_SECTION_OFFSET, ALLY_UNIT_COUNT_SECTION_SIZE},
         };
 
 //        int a = Clock.getBytecodesLeft();
@@ -538,5 +549,45 @@ public class Comms {
         log("Reading common explore section");
 
         readMessageSection(COMMON_EXPLORE_SECTION_ID, COMMON_EXPLORE_SECTION_OFFSET, COMMON_EXPLORE_SECTION_SIZE);
+    }
+
+    public static void readAllyUnitCount(int msgInfo, int msgIndex) throws GameActionException {
+        allyUnitCounts[msgIndex] = msgInfo;
+    }
+
+
+    public static void writeAllyUnitCount(RobotType rt) throws GameActionException {
+        int index = getUnitCountIndex(rt);
+        if (index < 0) {
+            return;
+        }
+        int newCount = 1 + readCell(ALLY_UNIT_COUNT_SECTION_OFFSET + index);
+
+        log("Writing 'Ally Unit' " + newCount);
+        writeCell(newCount, ALLY_UNIT_COUNT_SECTION_OFFSET + index);
+    }
+
+    public static void readAllyUnitCountSections() throws GameActionException {
+        readMessageSection(ALLY_UNIT_COUNT_SECTION_ID, ALLY_UNIT_COUNT_SECTION_OFFSET, ALLY_UNIT_COUNT_SECTION_SIZE);
+    }
+
+    public static RobotType[] unitCountIndex2Type = new RobotType[] {SOLDIER, BUILDER, MINER, WATCHTOWER, LABORATORY};
+    public static int getUnitCountIndex(RobotType rt) {
+        switch (rt) {
+            case SOLDIER:
+                return 0;
+            case BUILDER:
+                return 1;
+            case MINER:
+                return 2;
+            case WATCHTOWER:
+                return 3;
+            case LABORATORY:
+                return 4;
+            default:
+                // special, don't warn
+//                logi("WARNING: unknown unit");
+        }
+        return -1;
     }
 }

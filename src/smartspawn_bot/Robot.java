@@ -106,6 +106,8 @@ public abstract class Robot extends Constants {
     public static MapLocation[] allyArchonLocs = new MapLocation[MAX_ARCHONS];
     public static boolean[] isAllyArchonLive = new boolean[MAX_ARCHONS];
 
+    public static int[] allyUnitCounts = new int[ALLY_UNIT_COUNT_SECTION_SIZE];
+
     // public static double myPassability;
     // public static int myInfluence;
     // public static int myConviction;
@@ -145,6 +147,9 @@ public abstract class Robot extends Constants {
 
         // report resources
         reportResources();
+
+        // report unit counts
+        Comms.writeAllyUnitCount(myType);
 
         printBuffer();
     }
@@ -191,6 +196,9 @@ public abstract class Robot extends Constants {
             if (roundNum % 10 == 1 || age == 1) {
                 Comms.readCommonExploreSection(); // no dependencies
             }
+            if (roundNum % 2 == 0) { // read on even
+                Comms.readAllyUnitCountSections();
+            }
             Comms.readBroadcastResourceSection();
             Comms.readReportResourceSection();
         }
@@ -198,6 +206,24 @@ public abstract class Robot extends Constants {
         if (myType == SOLDIER || myType == ARCHON || myType == WATCHTOWER) {
             Comms.readReportEnemySection();
         }
+    }
+
+    public static int getUnitCount(RobotType rt) {
+        switch (rt) {
+            case SOLDIER:
+                return allyUnitCounts[0];
+            case BUILDER:
+                return allyUnitCounts[1];
+            case MINER:
+                return allyUnitCounts[2];
+            case WATCHTOWER:
+                return allyUnitCounts[3];
+            case LABORATORY:
+                return allyUnitCounts[4];
+            default:
+                logi("WARNING: 'getUnitcount' Unsupported unit " + rt);
+        }
+        return -1;
     }
 
     public static void reportSensedEnemies() throws GameActionException {
