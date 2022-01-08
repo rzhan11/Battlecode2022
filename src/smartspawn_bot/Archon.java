@@ -195,7 +195,6 @@ public class Archon extends Robot {
     }
 
     public static void updateResourceZoneCount(int oldStatus, int newStatus, int zx, int zy) {
-        log("update " + oldStatus + " " + newStatus + " " + zx + " " + zy);
         if (oldStatus == newStatus) {
             return;
         }
@@ -287,8 +286,10 @@ public class Archon extends Robot {
         log("unknownFrontierCount " + unknownFrontierCount);
         log("mineCount " + mineCount);
 
-        minerGoal = unknownFrontierCount + mineCount;
+        minerGoal = (Math.min(unknownFrontierCount, 10)) + mineCount;
         minerGoal = Math.max(minerGoal, 20);
+
+        rc.setIndicatorString("mg:" + minerGoal + " u:" + unknownCount + " uf:" + unknownFrontierCount + " mc:" + mineCount);
     }
 
     public static Direction getBuildDir() throws GameActionException {

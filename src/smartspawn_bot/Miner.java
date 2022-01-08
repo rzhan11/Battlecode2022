@@ -49,7 +49,6 @@ public class Miner extends Robot {
         }
 
         if (wouldMineLoc != null) {
-            log("wml " + wouldMineLoc);
             if (rc.senseLead(wouldMineLoc) > 1 || rc.senseGold(wouldMineLoc) > 0) {
                 Direction moveDir = Nav.moveBetterTile(wouldMineLoc, myActionRadius);
                 return;
@@ -91,8 +90,14 @@ public class Miner extends Robot {
             }
         }
 
-        // go towards unknown zones
 
+        if (isExplorer) {
+            // exploring
+            explore();
+            rc.setIndicatorString("exploring " + exploreLoc);
+        }
+
+        // go towards unknown zones
         // check if target zones are known
         if (targetZoneLoc != null) {
             if (!checkGoodResourceZone(targetZone[0], targetZone[1])) {
@@ -157,7 +162,7 @@ public class Miner extends Robot {
             // reset explore loc if danger
             if (exploreLoc != null) {
                 if (checkSimilarDir(here.directionTo(exploreLoc), here.directionTo(closestDangerLoc))) {
-                    chooseNewExploreLoc();
+                    chooseNewExploreLoc(0);
                 }
             }
         }

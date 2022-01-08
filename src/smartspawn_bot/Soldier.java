@@ -352,6 +352,15 @@ public class Soldier extends Robot {
             resetTargetEnemyLoc();
             return;
         }
+
+        double curDist = Math.sqrt(here.distanceSquaredTo(targetEnemyLoc));
+        MapLocation newLoc = getClosestEnemyLoc();
+        if (newLoc != null) {
+            double newDist = Math.sqrt(here.distanceSquaredTo(newLoc));
+            if (newDist < curDist - 10) { // closer by 10 tiles
+                targetEnemyLoc = newLoc;
+            }
+        }
     }
 
     public static void resetTargetEnemyLoc() {
@@ -359,6 +368,17 @@ public class Soldier extends Robot {
     }
 
     public static void findNewTargetEnemyLoc() {
+        MapLocation loc = getClosestEnemyLoc();
+        if (loc != null) {
+            if (here.isWithinDistanceSquared(loc, 400)) {
+                targetEnemyLoc = getClosestEnemyLoc();
+            } else {
+                targetEnemyLoc = null;
+            }
+        }
+    }
+
+    public static MapLocation getClosestEnemyLoc() {
         MapLocation bestLoc = null;
         int bestDist = P_INF;
         for (int i = Comms.reportedEnemyCount; --i >= 0;) {
@@ -369,11 +389,6 @@ public class Soldier extends Robot {
                 bestDist = dist;
             }
         }
-
-        if (Math.sqrt(bestDist) < 20) {
-            targetEnemyLoc = bestLoc;
-        } else {
-            targetEnemyLoc = null;
-        }
+        return bestLoc;
     }
 }
