@@ -160,6 +160,17 @@ public class Comms {
     final public static int REPORT_ENEMY_SECTION_OFFSET = REPORT_RESOURCE_SECTION_OFFSET + REPORT_RESOURCE_SECTION_SIZE;
     final public static int REPORT_ENEMY_SECTION_SIZE = 16;
 
+    final public static int ALLY_SOLDIER_COUNT_SECTION_ID = 5;
+    final public static int ALLY_SOLDIER_COUNT_SECTION_OFFSET = REPORT_ENEMY_SECTION_OFFSET + REPORT_ENEMY_SECTION_SIZE;
+    final public static int ALLY_SOLDIER_COUNT_SECTION_SIZE = 1;
+
+    final public static int ALLY_BUILDER_COUNT_SECTION_ID = 6;
+    final public static int ALLY_BUILDER_COUNT_SECTION_OFFSET = ALLY_SOLDIER_COUNT_SECTION_OFFSET + ALLY_SOLDIER_COUNT_SECTION_SIZE;
+    final public static int ALLY_BUILDER_COUNT_SECTION_SIZE = 1;
+
+    final public static int ALLY_MINER_COUNT_SECTION_ID = 7;
+    final public static int ALLY_MINER_COUNT_SECTION_OFFSET = ALLY_BUILDER_COUNT_SECTION_OFFSET + ALLY_BUILDER_COUNT_SECTION_SIZE;
+    final public static int ALLY_MINER_COUNT_SECTION_SIZE = 1;
     /*
     Write a message to an empty cell in a given section
     ---
@@ -250,7 +261,12 @@ public class Comms {
             case REPORT_ENEMY_SECTION_ID:
                 readReportEnemy(msgInfo);
                 break;
-
+            case ALLY_SOLDIER_COUNT_SECTION_ID:
+                break;
+            case ALLY_BUILDER_COUNT_SECTION_ID:
+                break;
+            case ALLY_MINER_COUNT_SECTION_ID:
+                break;
             default:
                 logi("ERROR: Unknown sectionID " + sectionID);
                 break;
@@ -266,6 +282,9 @@ public class Comms {
         int[][] sectionInfo = new int[][]{
             {REPORT_RESOURCE_SECTION_OFFSET, REPORT_RESOURCE_SECTION_SIZE},
             {REPORT_ENEMY_SECTION_OFFSET, REPORT_ENEMY_SECTION_SIZE},
+            {ALLY_SOLDIER_COUNT_SECTION_OFFSET, ALLY_SOLDIER_COUNT_SECTION_SIZE},
+            {ALLY_BUILDER_COUNT_SECTION_OFFSET, ALLY_BUILDER_COUNT_SECTION_SIZE},
+            {ALLY_MINER_COUNT_SECTION_OFFSET, ALLY_MINER_COUNT_SECTION_SIZE},
         };
 
 //        int a = Clock.getBytecodesLeft();
@@ -388,5 +407,31 @@ public class Comms {
         reportedEnemyCount = 0;
 
         readMessageSection(REPORT_ENEMY_SECTION_ID, REPORT_ENEMY_SECTION_OFFSET, REPORT_ENEMY_SECTION_SIZE);
+    }
+
+    public static void writeUnitCount(RobotType rt) throws GameActionException {
+      int offset = 0, size = 0;
+      switch (rt) {
+          case SOLDIER:
+              offset = ALLY_SOLDIER_COUNT_SECTION_OFFSET;
+              size = ALLY_SOLDIER_COUNT_SECTION_SIZE;
+              break;
+          case BUILDER:
+              offset = ALLY_BUILDER_COUNT_SECTION_OFFSET;
+              size = ALLY_BUILDER_COUNT_SECTION_SIZE;
+              break;
+          case MINER:
+              offset = ALLY_MINER_COUNT_SECTION_OFFSET;
+              size = ALLY_MINER_COUNT_SECTION_SIZE;
+              break;
+          default:
+              logi("WARNING: unknown unit");
+      }
+
+      int count = readCell(offset);
+
+      writeCell(count + 1, offset);
+
+
     }
 }

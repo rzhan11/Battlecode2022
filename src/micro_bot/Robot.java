@@ -134,7 +134,19 @@ public abstract class Robot extends Constants {
         if (myType == ARCHON) {
             if (roundNum != spawnRound) {
                 if (roundNum % 2 == 1 && Archon.isPrimaryArchon()) {
+                    log("soldier: " + readCell(ALLY_SOLDIER_COUNT_SECTION_OFFSET));
+                    log("builder: " + readCell(ALLY_BUILDER_COUNT_SECTION_OFFSET));
+                    log("miner: " + readCell(ALLY_MINER_COUNT_SECTION_OFFSET));
                     Comms.clearMessageBoard();
+                }
+            }
+        }
+
+        // robot comm updates (not buildings)
+        if (!myType.isBuilding()) {
+            if (roundNum != spawnRound) {
+                if (roundNum % 2 == 1) {
+                    Comms.writeUnitCount(myType);
                 }
             }
         }
