@@ -3,11 +3,10 @@ package walker_bot;
 import battlecode.common.*;
 import static battlecode.common.RobotType.*;
 
-import static walker_bot.Comms.*;
 import static walker_bot.Debug.*;
 import static walker_bot.Map.*;
-import static walker_bot.Resource.*;
 import static walker_bot.Utils.*;
+import static walker_bot.Zone.*;
 
 public class Archon extends Robot {
     // constants
@@ -31,7 +30,7 @@ public class Archon extends Robot {
     // code run each turn
     public static void turn() throws GameActionException {
         // put role-specific updates here
-//        if (roundNum == 100) {
+//        if (roundNum == 20) {
 //            rc.resign();
 //        }
 
@@ -41,8 +40,14 @@ public class Archon extends Robot {
             log("i " + i + ": " + allyArchonLocs[i] + " " + isAllyArchonLive[i]);
         }
 
+        if (Archon.isPrimaryArchon()) { // broadcast if is primary archon
+            Comms.broadcastResources();
+        }
+
+
+
 //        if (isPrimaryArchon()) {
-//            Resource.displayZoneStatus();
+//            Zone.displayZoneResourceStatus();
 //        }
 
 //        if (myID == 5) {
@@ -109,6 +114,10 @@ public class Archon extends Robot {
     }
 
     public static boolean isPrimaryArchon() {
+        if (myType != ARCHON) {
+            return false;
+        }
+
         for (int i = myArchonIndex; --i >= 0;) {
             if (isAllyArchonLive[i]) {
                 return false;

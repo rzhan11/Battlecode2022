@@ -1,10 +1,10 @@
-package walker_bot;
+package smartspawn_bot;
 
 import battlecode.common.*;
 
-import static walker_bot.Debug.logi;
-import static walker_bot.Zone.*;
-import static walker_bot.Utils.*;
+import static smartspawn_bot.Debug.logi;
+import static smartspawn_bot.Zone.*;
+import static smartspawn_bot.Utils.*;
 
 
 public class Miner extends Robot {

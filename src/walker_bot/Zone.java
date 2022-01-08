@@ -10,23 +10,16 @@ import static walker_bot.Robot.*;
 Responsible for tracking resources
 
  */
-public class Resource {
+public class Zone {
     final public static int ZONE_SIZE = 4;
     final public static int ZONE_SIZE_HALF = ZONE_SIZE / 2;
     public static int ZONE_XNUM;
     public static int ZONE_YNUM;
+    public static int ZONE_TOTAL_NUM;
 
     final public static int ZONE_UNKNOWN_FLAG = 0;
     final public static int ZONE_EMPTY_FLAG = 1;
     final public static int ZONE_MINE_FLAG = 2;
-
-    public static int[][] zoneResourceStatus;
-
-    public static void initResources() {
-        ZONE_XNUM = (rc.getMapWidth() + ZONE_SIZE - 1) / ZONE_SIZE;
-        ZONE_YNUM = (rc.getMapHeight() + ZONE_SIZE - 1) / ZONE_SIZE;
-        zoneResourceStatus = new int[ZONE_XNUM][ZONE_YNUM];
-    }
 
     public static int[] loc2Zone(MapLocation loc) {
         return new int[] {loc.x / ZONE_SIZE, loc.y / ZONE_SIZE};
@@ -65,7 +58,21 @@ public class Resource {
         return new MapLocation(zx * ZONE_SIZE + ZONE_SIZE_HALF, zy * ZONE_SIZE + ZONE_SIZE_HALF);
     }
 
-    public static void displayZoneStatus() {
+    /*
+    Zone Resource Tracking
+     */
+
+    public static int[][] zoneResourceStatus;
+
+    public static void initResources() {
+        ZONE_XNUM = (rc.getMapWidth() + ZONE_SIZE - 1) / ZONE_SIZE;
+        ZONE_YNUM = (rc.getMapHeight() + ZONE_SIZE - 1) / ZONE_SIZE;
+        ZONE_TOTAL_NUM = ZONE_XNUM * ZONE_YNUM;
+
+        zoneResourceStatus = new int[ZONE_XNUM][ZONE_YNUM];
+    }
+
+    public static void displayZoneResourceStatus() {
         log("dzs " + zoneResourceStatus[0][0] + " " + ZONE_UNKNOWN_FLAG + " " + ZONE_EMPTY_FLAG + " " + ZONE_MINE_FLAG);
         for (int i = 0; i < ZONE_XNUM; i++) {
             for (int j = 0; j < ZONE_YNUM; j++) {

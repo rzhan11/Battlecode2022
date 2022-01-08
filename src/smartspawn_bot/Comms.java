@@ -1,13 +1,13 @@
-package walker_bot;
+package smartspawn_bot;
 
 import battlecode.common.*;
 
 import static battlecode.common.RobotType.*;
 
-import static walker_bot.Debug.*;
-import static walker_bot.Zone.*;
-import static walker_bot.Robot.*;
-import static walker_bot.Utils.*;
+import static smartspawn_bot.Debug.*;
+import static smartspawn_bot.Zone.*;
+import static smartspawn_bot.Robot.*;
+import static smartspawn_bot.Utils.*;
 
 
 public class Comms {
@@ -164,6 +164,10 @@ public class Comms {
     final public static int REPORT_ENEMY_SECTION_OFFSET = BROADCAST_RESOURCE_SECTION_ID + BROADCAST_RESOURCE_SECTION_OFFSET;
     final public static int REPORT_ENEMY_SECTION_SIZE = 16;
 
+    final public static int COMMON_EXPLORE_SECTION_ID = 6;
+    final public static int COMMON_EXPLORE_SECTION_OFFSET = REPORT_ENEMY_SECTION_OFFSET + REPORT_ENEMY_SECTION_SIZE;
+    final public static int COMMON_EXPLORE_SECTION_SIZE = 4;
+
     /*
     Write a message to an empty cell in a given section
     ---
@@ -257,6 +261,9 @@ public class Comms {
             case REPORT_ENEMY_SECTION_ID:
                 readReportEnemy(msgInfo);
                 break;
+            case COMMON_EXPLORE_SECTION_ID:
+                readCommonExplore(msgInfo);
+                break;
 
             default:
                 logi("ERROR: Unknown sectionID " + sectionID);
@@ -319,6 +326,9 @@ public class Comms {
         if (live) {
             msg += 1 << 13; // live
         }
+        if (Archon.archonSpawnBit[archonIndex] == 1) {
+            msg += 1 << 14;
+        }
 
         writeCell(msg, ALLY_ARCHON_SECTION_OFFSET + archonIndex);
     }
@@ -330,6 +340,12 @@ public class Comms {
         // live
         int liveBit = (msgInfo >> 13) & 1;
         isAllyArchonLive[archonIndex] = (liveBit == 1);
+
+        if (myType == ARCHON) {
+            // spawn bit
+            int spawnBit = (msgInfo >> 14) & 1;
+            Archon.archonSpawnBit[archonIndex] = spawnBit;
+        }
 
         // turn parity
         if (isAllyArchonLive[archonIndex] && myType == ARCHON) {
@@ -364,7 +380,7 @@ public class Comms {
     public static void readReportResource(int msgInfo) throws GameActionException {
         int[] zone = bits2zone(msgInfo & ZONE_POS_MASK);
         int status = msgInfo >>> 8;
-        log("Reading 'Report Resource' " + zone[0] + " " + zone[1] + " s:" + status);
+//        log("Reading 'Report Resource' " + zone[0] + " " + zone[1] + " s:" + status);
 
         zoneResourceStatus[zone[0]][zone[1]] = status;
     }
@@ -400,27 +416,6 @@ public class Comms {
 
             msg = (msg + zoneResourceStatus[zx][zy]) << BROADCAST_RESOURCE_SHIFT;
 
-
-            {
-                MapLocation loc = new MapLocation(zx * ZONE_SIZE, zy * ZONE_SIZE + 1);
-                int[] color = PINK;
-                switch (zoneResourceStatus[zx][zy]) {
-                    case ZONE_UNKNOWN_FLAG:
-                        color = BLACK;
-                        break;
-                    case ZONE_EMPTY_FLAG:
-                        color = RED;
-                        break;
-                    case ZONE_MINE_FLAG:
-                        color = GREEN;
-                        break;
-
-                    default:
-                        logi("WARNING: 'displayZoneStatus' Unknown zone status! ");
-                }
-                Debug.drawDot(loc, color);
-            }
-
             zoneIndex++;
         }
         msg = msg >> BROADCAST_RESOURCE_SHIFT;
@@ -429,7 +424,7 @@ public class Comms {
     }
 
     public static void readBroadcastResource(int msgInfo, int msgIndex) throws GameActionException {
-        log("Reading 'Broadcast Resource' " + msgInfo + " " + msgIndex);
+//        log("Reading 'Broadcast Resource' " + msgInfo + " " + msgIndex);
 
         int zoneIndex = (getBroadcastZone(msgIndex) + BROADCAST_RESOURCE_CELL_DENSITY) % ZONE_TOTAL_NUM;
 
@@ -444,26 +439,6 @@ public class Comms {
             zoneResourceStatus[zx][zy] = msgInfo & BROADCAST_RESOURCE_MASK;
 
             msgInfo = msgInfo >> BROADCAST_RESOURCE_SHIFT;
-
-            if (myID == 5) {
-                MapLocation loc = new MapLocation(zx * ZONE_SIZE + 1, zy * ZONE_SIZE);
-                int[] color = PINK;
-                switch (zoneResourceStatus[zx][zy]) {
-                    case ZONE_UNKNOWN_FLAG:
-                        color = BLACK;
-                        break;
-                    case ZONE_EMPTY_FLAG:
-                        color = RED;
-                        break;
-                    case ZONE_MINE_FLAG:
-                        color = GREEN;
-                        break;
-
-                    default:
-                        logi("WARNING: 'displayZoneStatus' Unknown zone status! ");
-                }
-                Debug.drawDot(loc, color);
-            }
         }
         //
     }
@@ -478,6 +453,9 @@ public class Comms {
     }
 
     public static void readBroadcastResourceSection() throws GameActionException {
+        if (Archon.isPrimaryArchon()) {
+            return;
+        }
         int a = Clock.getBytecodesLeft();
         readMessageSection(BROADCAST_RESOURCE_SECTION_ID, BROADCAST_RESOURCE_SECTION_OFFSET, BROADCAST_RESOURCE_SECTION_SIZE);
         int b = Clock.getBytecodesLeft();
@@ -513,6 +491,7 @@ public class Comms {
 
     public static MapLocation[] reportedEnemyLocs;
     public static int reportedEnemyCount;
+
     public static void readReportEnemySection() throws GameActionException {
 //        int a = Clock.getBytecodesLeft();
         reportedEnemyLocs = new MapLocation[REPORT_ENEMY_SECTION_SIZE];
@@ -521,5 +500,43 @@ public class Comms {
         readMessageSection(REPORT_ENEMY_SECTION_ID, REPORT_ENEMY_SECTION_OFFSET, REPORT_ENEMY_SECTION_SIZE);
 //        int b = Clock.getBytecodesLeft();
 //        log("bytecode " + (a - b) + " " + reportedEnemyCount);
+    }
+
+    public static MapLocation commonExploreLoc = new MapLocation(0, 0);
+    public static int commonExploreDist = P_INF;
+
+    public static void writeCommonExplore(int index, MapLocation loc) throws GameActionException {
+        log("Writing 'Common Explore' " + loc);
+
+        int msg = loc2bits(loc);
+
+        writeCell(msg, COMMON_EXPLORE_SECTION_OFFSET + index);
+    }
+
+
+    public static void readCommonExplore(int msgInfo) throws GameActionException {
+        MapLocation loc = bits2loc(msgInfo & LOC_MASK);
+        log("Reading 'Common Explore' " + loc);
+
+        int dist = here.distanceSquaredTo(loc);
+        if (dist < commonExploreDist) {
+            commonExploreLoc = loc;
+            commonExploreDist = dist;
+        }
+    }
+
+    public static void writeCommonExploreSection() throws GameActionException {
+        for (int i = COMMON_EXPLORE_SECTION_SIZE; --i >= 0;) {
+            MapLocation loc = getRandomLoc();
+            writeCommonExplore(i, loc);
+        }
+    }
+
+    public static void readCommonExploreSection() throws GameActionException {
+        commonExploreLoc = null;
+        commonExploreDist = P_INF;
+        log("Reading common explore section");
+
+        readMessageSection(COMMON_EXPLORE_SECTION_ID, COMMON_EXPLORE_SECTION_OFFSET, COMMON_EXPLORE_SECTION_SIZE);
     }
 }

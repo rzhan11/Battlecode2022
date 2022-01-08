@@ -1,13 +1,13 @@
-package walker_bot;
+package smartspawn_bot;
 
 import battlecode.common.*;
 import static battlecode.common.RobotType.*;
 
-import static walker_bot.Comms.*;
-import static walker_bot.Debug.*;
-import static walker_bot.Nav.*;
-import static walker_bot.Zone.*;
-import static walker_bot.Utils.*;
+import static smartspawn_bot.Comms.*;
+import static smartspawn_bot.Debug.*;
+import static smartspawn_bot.Nav.*;
+import static smartspawn_bot.Zone.*;
+import static smartspawn_bot.Utils.*;
 
 public abstract class Robot extends Constants {
 
@@ -123,6 +123,7 @@ public abstract class Robot extends Constants {
             // archon location comms
             if (roundNum == spawnRound) { // init
                 Archon.myArchonIndex = Comms.findEmptyCell(ALLY_ARCHON_SECTION_OFFSET, ALLY_ARCHON_SECTION_SIZE);
+                Archon.archonSpawnBit = new int[MAX_ARCHONS];
             }
             Comms.writeAllyArchon(here, Archon.myArchonIndex, true);
         }
@@ -187,10 +188,15 @@ public abstract class Robot extends Constants {
 
         // skip these comms for non-archons on their spawn round
         if (myType == ARCHON || roundNum != spawnRound) {
-            if (!Archon.isPrimaryArchon()) {
-                Comms.readBroadcastResourceSection();
+            if (roundNum % 10 == 1 || age == 1) {
+                Comms.readCommonExploreSection(); // no dependencies
             }
+            Comms.readBroadcastResourceSection();
             Comms.readReportResourceSection();
+        }
+
+        if (myType == SOLDIER || myType == ARCHON || myType == WATCHTOWER) {
+            Comms.readReportEnemySection();
         }
     }
 
