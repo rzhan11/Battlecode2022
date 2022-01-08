@@ -34,16 +34,24 @@ public class Soldier extends Robot {
 
     }
 
-    public static void moveLogic() throws GameActionException {
+    public static Direction moveLogic() throws GameActionException {
         // skip turn, if cooldown is too high
         if (!rc.isMovementReady()) {
-            return;
+            return null;
         }
 
         // if in range of enemy and attack is on cooldown, move away from enemy soldiers
-        if (!rc.isActionReady() || !checkShouldFight()) {
-            runAwayFromEnemy();
+        if (!rc.isActionReady()) {// || !checkShouldFight()) {
+            Direction moveDir = runAwayFromEnemy();
+            rc.setIndicatorString("flee");
+            return moveDir;
         }
+
+//        log("g " + getUnitCount(SOLDIER) + " " + 10 * rc.getArchonCount());
+//        if (getUnitCount(SOLDIER) < 10 * rc.getArchonCount()) {
+//            tryDefense();
+//            return;
+//        }
 
         // if low health, run home
 //        updateHomeLoc();
@@ -68,10 +76,8 @@ public class Soldier extends Robot {
         // if enemies are visible, but too far, chase
         // should automatically target the closest one
         if (sensedEnemies.length > 0) {
-            MapLocation targetLoc = sensedEnemies[0].location;
-            Direction moveDir = Nav.fuzzyTo(targetLoc);
-            Debug.drawLine(here, targetLoc, RED);
-            return;
+            Direction moveDir = chaseEnemy();
+            return moveDir;
         }
 
         // go to reported enemies
@@ -88,10 +94,10 @@ public class Soldier extends Robot {
 
             // go towards target, if we have one
             if (targetEnemyLoc != null) {
-                Nav.fuzzyTo(targetEnemyLoc);
+                Direction moveDir = Nav.fuzzyTo(targetEnemyLoc);
                 drawLine(here, targetEnemyLoc, MAGENTA);
                 rc.setIndicatorString("going to report " + exploreLoc);
-                return;
+                return moveDir;
             }
         }
 
@@ -100,19 +106,25 @@ public class Soldier extends Robot {
             MapLocation targetLoc = Comms.commonExploreLoc;
             if (here.distanceSquaredTo(targetLoc) < 25) {
                 drawLine(here, targetLoc, BLACK);
-                Nav.wander(targetLoc, 8, 9, true);
+                Direction moveDir = Nav.wander(targetLoc, 8, 9, true);
                 rc.setIndicatorString("circling pack");
-                return;
+                return moveDir;
             } else {
                 drawLine(here, targetLoc, GRAY);
                 Direction moveDir = Nav.fuzzyTo(Comms.commonExploreLoc);
                 rc.setIndicatorString("goto pack");
-                return;
+                return moveDir;
             }
         }
 
 //        explore();
 //        rc.setIndicatorString("exploring " + exploreLoc);
+
+    }
+
+    public static void tryDefense() throws GameActionException {
+        Nav.wander(spawnLoc, 8, 9, true);
+        rc.setIndicatorString("defending");
     }
 
     final public static int STAY_HOME_LEAD_MAX = 300;
@@ -199,7 +211,7 @@ public class Soldier extends Robot {
         return allySoldierCount > enemySoldierCount;
     }
 
-    public static void runAwayFromEnemy() throws GameActionException {
+    public static Direction runAwayFromEnemy() throws GameActionException {
         // find closest danger soldiers
         RobotInfo[] closeEnemies = rc.senseNearbyRobots(SOLDIER.actionRadiusSquared, them);
         MapLocation closestEnemySoldier = null;
@@ -216,18 +228,56 @@ public class Soldier extends Robot {
         }
 
         if (closestEnemySoldier != null) {
-            Nav.fuzzyAway(closestEnemySoldier);
-            return;
+            return Nav.fuzzyAwaySimple(closestEnemySoldier);
         }
+        return null;
     }
 
-    public static void tryAttack() throws GameActionException {
-        if (!rc.isActionReady()) {
-            return;
+    public static Direction chaseEnemy() throws GameActionException {
+        //
+        if (attackableEnemies.length > 0) {
+            Direction moveDir = Nav.moveBetterTile(bestAttackLoc, myActionRadius);
+            rc.setIndicatorString("adjusting in range");
+            return moveDir;
         }
 
+
+
+        MapLocation bestLoc = null;
+        int bestDist = P_INF;
+        if (sensedEnemies.length > 20) {
+            bestLoc = sensedEnemies[0].location;
+            bestDist = here.distanceSquaredTo(bestLoc);
+        } else {
+            for (int i = sensedEnemies.length; --i >= 0;) {
+                MapLocation loc = sensedEnemies[i].location;
+                int dist = here.distanceSquaredTo(loc);
+                if (dist < bestDist) {
+                    bestLoc = loc;
+                    bestDist = dist;
+                }
+            }
+        }
+
+        if (bestLoc != null) {
+            Direction moveDir = Nav.fuzzyToSimple(bestLoc);
+            Debug.drawLine(here, bestLoc, RED);
+            rc.setIndicatorString("chasing");
+            return moveDir;
+        }
+
+        return null;
+    }
+
+    public static RobotInfo[] attackableEnemies;
+    public static MapLocation bestAttackLoc;
+
+    public static void updateAttackInfo() {
+
+        bestAttackLoc = null;
+
         // if enemies in range, attack
-        RobotInfo[] attackableEnemies = rc.senseNearbyRobots(myActionRadius, them);
+        attackableEnemies = rc.senseNearbyRobots(myActionRadius, them);
 
         RobotInfo bestEnemy = null;
         int bestScore = N_INF;
@@ -238,8 +288,20 @@ public class Soldier extends Robot {
                 bestScore = score;
             }
         }
+
         if (bestEnemy != null) {
-            Actions.doAttack(bestEnemy.location);
+            bestAttackLoc = bestEnemy.location;
+        }
+    }
+
+    public static void tryAttack() throws GameActionException {
+        updateAttackInfo();
+        if (!rc.isActionReady()) {
+            return;
+        }
+
+        if (bestAttackLoc != null) {
+            Actions.doAttack(bestAttackLoc);
             return;
         }
     }

@@ -2,7 +2,7 @@ package smartspawn_bot;
 
 import battlecode.common.*;
 
-import static smartspawn_bot.Debug.logi;
+import static smartspawn_bot.Debug.*;
 import static smartspawn_bot.Zone.*;
 import static smartspawn_bot.Utils.*;
 
@@ -29,7 +29,7 @@ public class Miner extends Robot {
     public static void turn() throws GameActionException {
         // put role-specific updates here
 
-
+        updateDanger();
 
         tryMine();
         moveLogic();
@@ -40,6 +40,11 @@ public class Miner extends Robot {
         // look for better spot to move
 
         if (!rc.isMovementReady()) {
+            return;
+        }
+
+        // avoid danger
+        if (avoidDanger() != null) {
             return;
         }
 
@@ -96,6 +101,64 @@ public class Miner extends Robot {
         rc.setIndicatorString("exploring " + exploreLoc);
     }
 
+    public static MapLocation closestDangerLoc;
+    public static int closestDangerDist;
+
+    public static MapLocation lastSeenDangerLoc;
+    public static int turnsSinceDanger;
+
+    public static void updateDanger() throws GameActionException {
+        closestDangerLoc = null;
+        closestDangerDist = P_INF;
+        for (int i = sensedEnemies.length; --i >= 0;) { // iterates from (len - 1) -> 0 inclusive
+            RobotInfo ri = sensedEnemies[i];
+            if (ri.type.canAttack()) {
+                int dist = here.distanceSquaredTo(ri.location);
+                if (dist < closestDangerDist) {
+                    closestDangerLoc = ri.location;
+                    closestDangerDist = dist;
+                }
+            }
+        }
+
+        if (closestDangerLoc == null) {
+            turnsSinceDanger++;
+        } else {
+            turnsSinceDanger = 0;
+            lastSeenDangerLoc = closestDangerLoc;
+
+            // reset resource zone target if danger
+            if (targetZoneLoc != null) {
+                if (checkSimilarDir(here.directionTo(targetZoneLoc), here.directionTo(closestDangerLoc))) {
+                    resetTargetResourceZone();
+                }
+            }
+
+            // reset explore loc if danger
+            if (exploreLoc != null) {
+                if (checkSimilarDir(here.directionTo(exploreLoc), here.directionTo(closestDangerLoc))) {
+                    chooseNewExploreLoc();
+                }
+            }
+        }
+    }
+
+    public static Direction avoidDanger() throws GameActionException {
+        if (closestDangerLoc == null) {
+//            if (turnsSinceMucker <= FLEE_MEMORY) {
+//                log("Memory flee " + lastSeenMucker);
+//                return fuzzyAway(lastSeenMucker);
+//            } else {
+//                log("No recent muckers");
+//                return null;
+//            }
+            log("No recent danger");
+            return null;
+        } else {
+            return Nav.fuzzyAway(closestDangerLoc);
+        }
+    }
+
     public static int[] targetZone = null;
     public static MapLocation targetZoneLoc = null;
 
@@ -137,6 +200,11 @@ public class Miner extends Robot {
 //            targetZone = mineZone;
 //            targetZoneLoc = mineZoneLoc;
         }
+    }
+
+    public static void resetTargetResourceZone() {
+        targetZoneLoc = null;
+        targetZone = null;
     }
 
     public static void tryMine() throws GameActionException {

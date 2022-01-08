@@ -1,5 +1,6 @@
 
 src/*_nolog
+src/*_ref
 uploads/
 
 dist/*

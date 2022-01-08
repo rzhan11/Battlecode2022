@@ -2,7 +2,7 @@ cd ..
 
 ./gradlew run \
 -PteamA=smartspawn_bot \
--PteamB=walker_bot_nolog \
+-PteamB=smartspawn_bot_nolog_ref \
 -Pmaps=eckleburg \
 2>&1 | tee scripts/logs/log.txt
 

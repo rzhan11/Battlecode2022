@@ -65,6 +65,10 @@ public class Utils {
         return ALL_DIRS[randInt(9)];
     }
 
+    public static boolean checkSimilarDir(Direction dir1, Direction dir2) {
+        return dir1 == dir2 || dir1 == dir2.rotateLeft() || dir1 == dir2.rotateRight();
+    }
+
     public static int RANDOM_SEED;
     public static double random() {
         double x = Math.sin(RANDOM_SEED++) * 10000;
@@ -79,6 +83,11 @@ public class Utils {
     public static boolean randBoolean() {
         double x = Math.sin(RANDOM_SEED++) * 10000;
         return x - Math.floor(x) < 0.5;
+    }
+
+    public static double randomFromSeed(int seed) {
+        double x = Math.sin(seed) * 10000;
+        return x - Math.floor(x);
     }
 
     public static int getDirSimilarity(Direction d1, Direction d2) {

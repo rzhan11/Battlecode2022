@@ -53,7 +53,7 @@ public class Archon extends Robot {
         if (Archon.isPrimaryArchon()) { // broadcast if is primary archon
             Comms.broadcastResources();
 
-            if (roundNum % 10 == 1) {
+            if (roundNum % 50 == 1) { // common explore update frequency
                 Comms.writeCommonExploreSection();
             }
         }

@@ -3,10 +3,11 @@ package smartspawn_bot;
 import battlecode.common.*;
 
 
-import static smartspawn_bot.Robot.*;
 import static smartspawn_bot.Bug.*;
+import static smartspawn_bot.Constants.*;
 import static smartspawn_bot.Debug.*;
 import static smartspawn_bot.Map.*;
+import static smartspawn_bot.Robot.*;
 
 public class Nav {
 
@@ -121,6 +122,58 @@ public class Nav {
                 || checkDirMoveable(dir.rotateRight());
     }
 
+    /*
+    Move to better tile (less rubble)
+     */
+    public static Direction moveBetterTile() throws GameActionException {
+        Direction bestDir = null;
+        int bestRubble = P_INF;
+        for (int i = DIRS.length; --i >= 0;) {
+            Direction dir = DIRS[i];
+            if (checkDirMoveable(dir)) {
+                int rubble = rc.senseRubble(here);
+                if (rubble < bestRubble) {
+                    bestDir = dir;
+                    bestRubble = rubble;
+                }
+            }
+        }
+
+        if (bestRubble < rc.senseRubble(here)) {
+            Actions.doMove(bestDir);
+            return bestDir;
+        } else {
+            return null;
+        }
+    }
+
+    /*
+    Move to better tile (less rubble)
+     */
+    public static Direction moveBetterTile(MapLocation center, int radius) throws GameActionException {
+        Direction bestDir = null;
+        int bestRubble = P_INF;
+        for (int i = DIRS.length; --i >= 0;) {
+            Direction dir = DIRS[i];
+            if (checkDirMoveable(dir)) {
+                if (center.isWithinDistanceSquared(here.add(dir), radius)) {
+                    int rubble = rc.senseRubble(here);
+                    if (rubble < bestRubble) {
+                        bestDir = dir;
+                        bestRubble = rubble;
+                    }
+                }
+            }
+        }
+
+        if (bestRubble < rc.senseRubble(here)) {
+            Actions.doMove(bestDir);
+            return bestDir;
+        } else {
+            return null;
+        }
+    }
+
     public static MapLocation avoidCorner(MapLocation loc, int minDist) {
         MapLocation cornerBL = new MapLocation(XMIN, YMIN);
         MapLocation cornerBR = new MapLocation(XMAX, YMIN);
@@ -139,8 +192,65 @@ public class Nav {
     }
 
 
+    public static Direction fuzzyToSimple(MapLocation dangerLoc) throws GameActionException {
+        int curDist = here.distanceSquaredTo(dangerLoc);
+
+        Direction bestDir = null;
+        double bestRubble = P_INF;
+        for (int i = 8; --i >= 0;) { // 7->0
+            Direction dir = DIRS[i];
+            if (checkDirMoveable(dir)) {
+                MapLocation adjLoc = rc.adjacentLocation(dir);
+                int dist = adjLoc.distanceSquaredTo(dangerLoc);
+                if (dist < curDist) {
+                    double rubble = rc.senseRubble(adjLoc);
+                    if (rubble < bestRubble) {
+                        bestDir = dir;
+                        bestRubble = rubble;
+                    }
+                }
+            }
+        }
+
+        if (bestDir != null) {
+            Actions.doMove(bestDir);
+        } else {
+            return null;
+        }
+        return bestDir;
+    }
+
+    public static Direction fuzzyAwaySimple(MapLocation dangerLoc) throws GameActionException {
+        int curDist = here.distanceSquaredTo(dangerLoc);
+
+        Direction bestDir = null;
+        double bestRubble = P_INF;
+        for (int i = 8; --i >= 0;) { // 7->0
+            Direction dir = DIRS[i];
+            if (checkDirMoveable(dir)) {
+                MapLocation adjLoc = rc.adjacentLocation(dir);
+                int dist = adjLoc.distanceSquaredTo(dangerLoc);
+                if (dist > curDist) {
+                    double rubble = rc.senseRubble(adjLoc);
+                    if (rubble < bestRubble) {
+                        bestDir = dir;
+                        bestRubble = rubble;
+                    }
+                }
+            }
+        }
+
+        if (bestDir != null) {
+            Actions.doMove(bestDir);
+        } else {
+            return null;
+        }
+        return bestDir;
+    }
+
+
     public static Direction fuzzyTo(MapLocation dangerLoc) throws GameActionException {
-        log("Fuzzy to " + dangerLoc);
+        log("Fuzzy to " + dangerLoc + " " + here);
 
         double curRootDist = Math.sqrt(here.distanceSquaredTo(dangerLoc));
 

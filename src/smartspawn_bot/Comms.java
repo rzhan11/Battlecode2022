@@ -4,7 +4,6 @@ import battlecode.common.*;
 
 import static battlecode.common.RobotType.*;
 
-import static micro_bot.Debug.logi;
 import static smartspawn_bot.Debug.*;
 import static smartspawn_bot.Zone.*;
 import static smartspawn_bot.Robot.*;
