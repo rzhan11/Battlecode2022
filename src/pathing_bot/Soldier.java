@@ -253,25 +253,25 @@ public class Soldier extends Robot {
         }
 
         // pack exploring
-        {
-            MapLocation targetLoc = Comms.commonExploreLoc;
-            if (here.distanceSquaredTo(targetLoc) < 25) {
-                drawLine(here, targetLoc, BLACK);
-                Direction moveDir = Nav.moveBetterTile(targetLoc, 25);
-//                Direction moveDir = Nav.wander(targetLoc, 8, 9, true);
-                rc.setIndicatorString("at the pack");
-                return moveDir;
-            } else {
-                drawLine(here, targetLoc, GRAY);
-                Direction moveDir = BFS.move(targetLoc);
-                rc.setIndicatorString("goto pack");
-                return moveDir;
-            }
-        }
+//        {
+//            MapLocation targetLoc = Comms.commonExploreLoc;
+//            if (here.distanceSquaredTo(targetLoc) < 25) {
+//                drawLine(here, targetLoc, BLACK);
+//                Direction moveDir = Nav.moveBetterTile(targetLoc, 25);
+////                Direction moveDir = Nav.wander(targetLoc, 8, 9, true);
+//                rc.setIndicatorString("at the pack");
+//                return moveDir;
+//            } else {
+//                drawLine(here, targetLoc, GRAY);
+//                Direction moveDir = BFS.move(targetLoc);
+//                rc.setIndicatorString("goto pack");
+//                return moveDir;
+//            }
+//        }
 
-//        explore();
-//        rc.setIndicatorString("exploring " + exploreLoc);
-
+        Direction moveDir = exploreSimple();
+        rc.setIndicatorString("exploring " + exploreLoc);
+        return moveDir;
     }
 
     public static void tryDefense() throws GameActionException {
