@@ -49,7 +49,7 @@ public strictfp class RobotPlayer {
                 Watchtower.firstTurnSetup();
                 break;
             case MINER:
-                SimpleMiner.firstTurnSetup();
+                Miner.firstTurnSetup();
                 break;
             case BUILDER:
                 Builder.firstTurnSetup();
@@ -77,7 +77,7 @@ public strictfp class RobotPlayer {
                 Watchtower.turn();
                 break;
             case MINER:
-                SimpleMiner.turn();
+                Miner.turn();
                 break;
             case BUILDER:
                 Builder.turn();

@@ -447,41 +447,41 @@ public class Comms {
 
             msg = (msg + zoneResourceStatus[zx][zy]) << BROADCAST_RESOURCE_SHIFT;
 
-            // draw resource zone
-            {
-                MapLocation loc = new MapLocation(zx * ZONE_SIZE, zy * ZONE_SIZE);
-                int[] color = PINK;
-                switch (zoneResourceStatus[zx][zy]) {
-                    case ZONE_UNKNOWN_FLAG:
-                        color = BLACK;
-                        break;
-                    case ZONE_EMPTY_FLAG:
-                        color = RED;
-                        break;
-                    case ZONE_MINE_FLAG:
-                        color = GREEN;
-                        break;
-
-                    default:
-                        logi("WARNING: 'displayZoneStatus' Unknown zone status! " + zoneResourceStatus[zx][zy]);
-                }
-                Debug.drawDot(loc, color);
-
-            }
-
-            // draw danger zone
-            {
-                MapLocation loc = new MapLocation(zx * ZONE_SIZE + 1, zy * ZONE_SIZE + 1);
-                int[] color = PINK;
-                if (zoneDangerLastRound[zx][zy] == 0) {
-                    color = GRAY;
-                } else if (roundNum - zoneDangerLastRound[zx][zy] <= Miner.ZONE_DANGER_WAIT) {
-                    color = PINK;
-                } else {
-                    color = YELLOW;
-                }
-                Debug.drawDot(loc, color);
-            }
+//            // draw resource zone
+//            {
+//                MapLocation loc = new MapLocation(zx * ZONE_SIZE, zy * ZONE_SIZE);
+//                int[] color = PINK;
+//                switch (zoneResourceStatus[zx][zy]) {
+//                    case ZONE_UNKNOWN_FLAG:
+//                        color = BLACK;
+//                        break;
+//                    case ZONE_EMPTY_FLAG:
+//                        color = RED;
+//                        break;
+//                    case ZONE_MINE_FLAG:
+//                        color = GREEN;
+//                        break;
+//
+//                    default:
+//                        logi("WARNING: 'displayZoneStatus' Unknown zone status! " + zoneResourceStatus[zx][zy]);
+//                }
+//                Debug.drawDot(loc, color);
+//
+//            }
+//
+//            // draw danger zone
+//            {
+//                MapLocation loc = new MapLocation(zx * ZONE_SIZE + 1, zy * ZONE_SIZE + 1);
+//                int[] color = PINK;
+//                if (zoneDangerLastRound[zx][zy] == 0) {
+//                    color = GRAY;
+//                } else if (roundNum - zoneDangerLastRound[zx][zy] <= Miner.ZONE_DANGER_WAIT) {
+//                    color = PINK;
+//                } else {
+//                    color = YELLOW;
+//                }
+//                Debug.drawDot(loc, color);
+//            }
 
             zoneIndex++;
         }

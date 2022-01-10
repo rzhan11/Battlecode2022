@@ -269,8 +269,8 @@ public class Soldier extends Robot {
 //            }
 //        }
 
-        Direction moveDir = exploreSimple();
-        rc.setIndicatorString("exploring " + exploreLoc);
+        Direction moveDir = Explore.exploreSimple();
+        rc.setIndicatorString("exploring " + Explore.exploreLoc);
         return moveDir;
     }
 
@@ -531,7 +531,7 @@ public class Soldier extends Robot {
     private static Direction goToTargetEnemy() throws GameActionException {
         Direction moveDir = BFS.move(targetEnemyLoc);
         drawLine(here, targetEnemyLoc, MAGENTA);
-        rc.setIndicatorString("going to report " + exploreLoc);
+        rc.setIndicatorString("going to report " + targetEnemyLoc);
         return moveDir;
     }
 

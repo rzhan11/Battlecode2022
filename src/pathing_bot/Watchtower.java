@@ -3,6 +3,7 @@ package pathing_bot;
 import battlecode.common.*;
 
 import static pathing_bot.Debug.*;
+import static pathing_bot.Explore.*;
 import static pathing_bot.Soldier.*;
 import static pathing_bot.Utils.*;
 
