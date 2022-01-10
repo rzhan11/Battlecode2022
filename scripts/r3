@@ -1,8 +1,8 @@
 cd ..
 
 ./gradlew run \
--PteamA=smartspawn_bot \
--PteamB=smartspawn_bot_nolog \
+-PteamA=pathing_bot \
+-PteamB=pathing_bot_nolog \
 -Pmaps=maptestsmall \
 2>&1 | tee scripts/logs/log.txt
 
