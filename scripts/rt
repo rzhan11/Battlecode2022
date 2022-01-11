@@ -1,9 +1,9 @@
 cd ..
 
 ./gradlew run \
--PteamA=pathing_bot \
+-PteamA=explore_bot \
 -PteamB=examplefuncsplayer \
--Pmaps=DefaultMap \
+-Pmaps=eckleburg \
 2>&1 | tee scripts/logs/log.txt
 
 #./gradlew run \
