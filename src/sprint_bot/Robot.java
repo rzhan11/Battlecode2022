@@ -1,12 +1,12 @@
-package explore_bot_nolog_ref;
+package sprint_bot;
 
 import battlecode.common.*;
 import static battlecode.common.RobotType.*;
 
-import static explore_bot_nolog_ref.Comms.*;
-import static explore_bot_nolog_ref.Debug.*;
-import static explore_bot_nolog_ref.Zone.*;
-import static explore_bot_nolog_ref.Utils.*;
+import static sprint_bot.Comms.*;
+import static sprint_bot.Debug.*;
+import static sprint_bot.Zone.*;
+import static sprint_bot.Utils.*;
 
 public abstract class Robot extends Constants {
 

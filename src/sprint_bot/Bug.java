@@ -1,13 +1,13 @@
-package explore_bot_nolog_ref;
+package sprint_bot;
 
 import battlecode.common.*;
 
 import java.util.HashMap;
 
-import static explore_bot_nolog_ref.Constants.*;
-import static explore_bot_nolog_ref.Debug.*;
-import static explore_bot_nolog_ref.Map.*;
-import static explore_bot_nolog_ref.Robot.*;
+import static sprint_bot.Constants.*;
+import static sprint_bot.Debug.*;
+import static sprint_bot.Map.*;
+import static sprint_bot.Robot.*;
 
 public class Bug extends Nav {
 

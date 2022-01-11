@@ -1,4 +1,4 @@
-package explore_bot_nolog_ref;
+package sprint_bot;
 
 public class Constants {
     /*

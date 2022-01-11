@@ -1,9 +1,9 @@
-package explore_bot_nolog_ref;
+package sprint_bot;
 
 import battlecode.common.*;
 
-import static explore_bot_nolog_ref.Robot.*;
-import static explore_bot_nolog_ref.Debug.*;
+import static sprint_bot.Robot.*;
+import static sprint_bot.Debug.*;
 
 public class Actions {
 

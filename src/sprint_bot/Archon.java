@@ -1,14 +1,14 @@
-package explore_bot_nolog_ref;
+package sprint_bot;
 
 import battlecode.common.*;
 
 import static battlecode.common.RobotType.*;
 
-import static explore_bot_nolog_ref.Comms.*;
-import static explore_bot_nolog_ref.Debug.*;
-import static explore_bot_nolog_ref.Map.*;
-import static explore_bot_nolog_ref.Utils.*;
-import static explore_bot_nolog_ref.Zone.*;
+import static sprint_bot.Comms.*;
+import static sprint_bot.Debug.*;
+import static sprint_bot.Map.*;
+import static sprint_bot.Utils.*;
+import static sprint_bot.Zone.*;
 
 public class Archon extends Robot {
     // constants

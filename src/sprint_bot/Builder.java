@@ -1,10 +1,10 @@
-package explore_bot_nolog_ref;
+package sprint_bot;
 
 import battlecode.common.*;
 
 import static battlecode.common.RobotType.*;
-import static explore_bot_nolog_ref.Debug.logi;
-import static explore_bot_nolog_ref.Utils.*;
+import static sprint_bot.Debug.logi;
+import static sprint_bot.Utils.*;
 
 public class Builder extends Robot {
     // constants

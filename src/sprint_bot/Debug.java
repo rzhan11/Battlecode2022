@@ -1,8 +1,8 @@
-package explore_bot_nolog_ref;
+package sprint_bot;
 
 import battlecode.common.*;
 
-import static explore_bot_nolog_ref.Robot.*;
+import static sprint_bot.Robot.*;
 
 public class Debug {
 

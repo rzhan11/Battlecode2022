@@ -1,9 +1,9 @@
-package explore_bot_nolog_ref;
+package sprint_bot;
 
 import battlecode.common.*;
 
-import static explore_bot_nolog_ref.Debug.*;
-import static explore_bot_nolog_ref.Explore.*;
+import static sprint_bot.Debug.*;
+import static sprint_bot.Explore.*;
 
 public class Watchtower extends Robot {
     // constants
