@@ -3,7 +3,7 @@ import math
 MAX_MAP_SIZE = 60
 MAX_R2 = 13
 MAX_RUBBLE = 100
-PACKAGE_NAME = "pathing_bot"
+PACKAGE_NAME = "comm_explore_bot"
 
 max_radius = math.floor(math.sqrt(MAX_R2))
 
@@ -125,7 +125,7 @@ def write_method(xmin, ymin, xmax, ymax):
             dir_name = DIRS[(x, y)]
 #
             # method_contents += f"if (rc.onTheMap(l{suf})) {{\n"
-            method_contents += f"if (rc.canMove({dir_name})) {{\n"
+            method_contents += f"if (!rc.canSenseRobotAtLocation(l{suf})) {{\n"
             method_contents += f"v{suf} = 10 + rc.senseRubble(l{suf});\n"
 
 

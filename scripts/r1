@@ -1,9 +1,10 @@
 cd ..
 
 ./gradlew run \
--PteamA=sprint_bot \
--PteamB=pathing_bot_nolog \
--Pmaps=eckleburg \
+-PteamA=comm_explore_bot \
+-PteamB=sprint_bot \
+-Pmaps=rivers \
+-PprofilerEnabled=false \
 2>&1 | tee scripts/logs/log.txt
 
 #./gradlew run \

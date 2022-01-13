@@ -1,12 +1,13 @@
-package explore_bot;
+package comm_explore_bot;
 
 import battlecode.common.*;
 
-import static explore_bot.Debug.*;
-import static explore_bot.Utils.*;
+import static comm_explore_bot.Debug.*;
+import static comm_explore_bot.Utils.*;
 
 public class Miner extends Robot {
     public static boolean useSimpleExplore;
+    final public static int ZONE_DANGER_WAIT = 10;
 
     public static void firstTurnSetup() throws GameActionException {
         // first turn comms
@@ -28,7 +29,9 @@ public class Miner extends Robot {
         }
         stopBytecode("updateMomentum");
 
+        startBytecode("updateDanger");
         updateDanger();
+        stopBytecode("updateDanger");
 
         Actions.setMovePause(true); // pause
         Direction moveDir = moveLogic();
@@ -36,15 +39,27 @@ public class Miner extends Robot {
         if (moveDir != null) {
             if (rc.senseRubble(here) < rc.senseRubble(here.add(moveDir))) {
                 // cur location is better
+                startBytecode("tryMine1");
                 tryMine();
+                stopBytecode("tryMine1");
+
                 Actions.doStoredMove();
+
+                startBytecode("tryMine1.5");
+                tryMine();
+                stopBytecode("tryMine1.5");
             } else {
                 // new location is better
                 Actions.doStoredMove();
+
+                startBytecode("tryMine2");
                 tryMine();
+                stopBytecode("tryMine2");
             }
         } else { // no movement, try mining in place
+            startBytecode("tryMine3");
             tryMine();
+            stopBytecode("tryMine3");
         }
     }
 
@@ -71,7 +86,9 @@ public class Miner extends Robot {
 
         // go to good lead locs
         {
+            startBytecode("mine - checkLead");
             MapLocation[] visibleLeadLocs = rc.senseNearbyLocationsWithLead(myVisionRadius, 2);
+            log("num lead " + visibleLeadLocs.length);
             if (visibleLeadLocs.length > 34) { // 68 / 2
                 visibleLeadLocs = rc.senseNearbyLocationsWithLead(8);
             }
@@ -88,6 +105,7 @@ public class Miner extends Robot {
                     bestDist = dist;
                 }
             }
+            stopBytecode("mine - checkLead");
 
             if (bestLoc != null) {
                 Direction moveDir = BFS.move(bestLoc);
@@ -98,13 +116,13 @@ public class Miner extends Robot {
         }
 
         // explore
-        if (useSimpleExplore) { // pick random
-            Direction moveDir = Explore.exploreSimple();
-            return moveDir;
-        } else { // use momentum
-            Direction moveDir = Explore.exploreMomentum();
-            return moveDir;
-        }
+//        if (useSimpleExplore) { // pick random
+//            Direction moveDir = Explore.exploreSimple();
+//            return moveDir;
+//        } else { // use momentum
+        Direction moveDir = Explore.exploreMomentum();
+        return moveDir;
+//        }
     }
 
     public static MapLocation closestDangerLoc;

@@ -5,6 +5,7 @@ uploads/
 
 dist/*
 build/*
+server_matches/*
 
 /matches
 /deploy/lib

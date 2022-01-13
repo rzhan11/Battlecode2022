@@ -4,4 +4,8 @@ ttlog(
 logline(
 loghalf(
 logByte(
+startBytecode(
+stopBytecode(
 rc.resign(
+printMyInfo(
+printBuffer(

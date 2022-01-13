@@ -1,11 +1,11 @@
-package pathing_bot;
+package comm_explore_bot;
 
 import battlecode.common.*;
 import static battlecode.common.Direction.*;
 
-import static pathing_bot.Debug.*;
-import static pathing_bot.Map.*;
-import static pathing_bot.Robot.*;
+import static comm_explore_bot.Debug.*;
+import static comm_explore_bot.Map.*;
+import static comm_explore_bot.Robot.*;
 
 public class BFS20 {
 

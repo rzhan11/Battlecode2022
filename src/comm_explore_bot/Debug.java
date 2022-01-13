@@ -1,13 +1,13 @@
-package sprint_bot;
+package comm_explore_bot;
 
 import battlecode.common.*;
 
-import static sprint_bot.Robot.*;
+import static comm_explore_bot.Robot.*;
 
 public class Debug {
 
     public static boolean SILENCE_LOGS = false;
-    public static boolean SILENCE_INDICATORS = true;
+    public static boolean SILENCE_INDICATORS = false;
 
     // Robot.endTurn and Robot.printMyInfo
     final public static boolean NO_TURN_LOGS = false;
@@ -52,7 +52,7 @@ public class Debug {
             case WATCHTOWER:  return true;
             case MINER:       return true;
             case BUILDER:     return true;
-            case SOLDIER:     return false;
+            case SOLDIER:     return true;
             case SAGE:        return true;
             default:
                 logi("ERROR: Sanity check failed - unknown class " + myType);

@@ -1,0 +1,1 @@
+scp mpl:~/private/Battlecode2022/matches/* ../server_matches/
