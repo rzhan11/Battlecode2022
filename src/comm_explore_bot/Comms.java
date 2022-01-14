@@ -177,7 +177,7 @@ public class Comms {
 
     final public static int REPORT_ENEMY_SECTION_ID = 6;
     final public static int REPORT_ENEMY_SECTION_OFFSET = BROADCAST_RESOURCE_SECTION_ID + BROADCAST_RESOURCE_SECTION_OFFSET;
-    final public static int REPORT_ENEMY_SECTION_SIZE = 16;
+    final public static int REPORT_ENEMY_SECTION_SIZE = 8;
 
     final public static int COMMON_EXPLORE_SECTION_ID = 7;
     final public static int COMMON_EXPLORE_SECTION_OFFSET = REPORT_ENEMY_SECTION_OFFSET + REPORT_ENEMY_SECTION_SIZE;
@@ -483,7 +483,7 @@ public class Comms {
         log("Reading 'Report Resource' " + zone[0] + " " + zone[1] + " s:" + status);
 
         if (myType == ARCHON) {
-            Archon.updateResourceZoneCount(zoneResourceStatus[zone[0]][zone[1]], status, zone[0], zone[1]);
+            Zone.updateResourceZoneCount(zoneResourceStatus[zone[0]][zone[1]], status, zone[0], zone[1]);
         }
         zoneResourceStatus[zone[0]][zone[1]] = status;
     }
@@ -527,7 +527,7 @@ public class Comms {
 
             msg = (msg + zoneRow[zy]) << BROADCAST_RESOURCE_SHIFT;
 
-            /*
+
             // draw resource zone
             {
                 MapLocation loc = new MapLocation(zx * ZONE_SIZE, zy * ZONE_SIZE);
@@ -548,7 +548,7 @@ public class Comms {
                 }
                 Debug.drawDot(loc, color);
 
-            }*/
+            }
 
             // draw danger zone
             {
@@ -573,8 +573,8 @@ public class Comms {
         int zoneIndex = getBroadcastZoneIndex(msgIndex);
         int zx = zoneIndex / ZONE_YNUM;
         int zy = zoneIndex % ZONE_YNUM;
-        log("Reading 'Broadcast Resource' " + msgInfo + " " + msgIndex);
-        tlog("zoneIndex " + zoneIndex + " " + zx + " " + zy);
+//        log("Reading 'Broadcast Resource' " + msgInfo + " " + msgIndex);
+//        tlog("zoneIndex " + zoneIndex + " " + zx + " " + zy);
 
         int[] zoneRow = zoneResourceStatus[zx];
 
@@ -582,7 +582,7 @@ public class Comms {
             if (myType == ARCHON) {
                 int status = msgInfo & BROADCAST_RESOURCE_MASK;
                 // update based on old vs new
-                Archon.updateResourceZoneCount(zoneRow[zy], status, zx, zy);
+                Zone.updateResourceZoneCount(zoneRow[zy], status, zx, zy);
             }
             zoneRow[zy] = msgInfo & BROADCAST_RESOURCE_MASK;
 
@@ -698,21 +698,44 @@ public class Comms {
         stopBytecode("readReportEnemySection");
     }
 
-    public static MapLocation commonExploreLoc = new MapLocation(0, 0);
+
+    public static MapLocation commonExploreLoc;
     public static int commonExploreDist = P_INF;
 
-    public static void writeCommonExplore(int index, MapLocation loc) throws GameActionException {
-        log("Writing 'Common Explore' " + loc);
+    public static int COMMON_EXPLORE_UPDATE_FREQ = 10;
 
-        int msg = loc2bits(loc);
+    /*
+    0-7 | Zone
+    8 | Empty (0 means exists, 1 means empty)
+     */
+    public static void writeCommonExplore(int msgIndex, int zoneIndex) throws GameActionException {
+        int msg;
+        if (zoneIndex != -1) { // still have zones
+            int zx = zoneIndex / ZONE_YNUM;
+            int zy = zoneIndex % ZONE_YNUM;
+            log("Writing 'Common Explore' " + msgIndex + " " + zoneIndex + " " + zx + " " + zy);
 
-        writeCell(msg, COMMON_EXPLORE_SECTION_OFFSET + index);
+            msg = zone2bits(zx, zy);
+        } else {
+            log("Writing 'Common Explore' " + msgIndex + " -1");
+            msg = BIT8; // signal empty bit
+        }
+
+        writeCell(msg, COMMON_EXPLORE_SECTION_OFFSET + msgIndex);
     }
 
 
     public static void readCommonExplore(int msgInfo) throws GameActionException {
-        MapLocation loc = bits2loc(msgInfo & LOC_MASK);
-        log("Reading 'Common Explore' " + loc);
+        // check empty
+        int emptyBit = (msgInfo & BIT8) >>> 8;
+        if (emptyBit == 1) { // is empty
+            log("Reading 'Common Explore' empty");
+            return;
+        }
+
+        int[] zone = bits2zone(msgInfo & ZONE_POS_MASK);
+        MapLocation loc = zone2Loc(zone[0], zone[1]);
+        log("Reading 'Common Explore' " + zone[0] + " " + zone[1]);
 
         int dist = here.distanceSquaredTo(loc);
         if (dist < commonExploreDist) {
@@ -722,26 +745,29 @@ public class Comms {
     }
 
     public static void writeCommonExploreSection() throws GameActionException {
+        int[] indexInfo = new int[] {0, -1}; // [zoneIndex, strIndex]
         for (int i = COMMON_EXPLORE_SECTION_SIZE; --i >= 0;) {
-            MapLocation loc = getRandomLoc();
-            int count = 0;
-            while (loc.isWithinDistanceSquared(getClosestAllyArchon(loc), 64)) {
-                loc = getRandomLoc();
-                count++;
-                if (count >= 3) { // try at most 3 times
-                    break;
+            if (indexInfo[0] >= 0) { // if previous was valid
+                indexInfo = ZoneString.findUnexplored(indexInfo[1] + 1);
+                if (indexInfo[1] >= 0) { // good
+                    writeCommonExplore(i, indexInfo[0]);
+                } else { // bad
+                    writeCommonExplore(i, -1);
                 }
+            } else { // bad
+                writeCommonExplore(i, -1);
             }
-            writeCommonExplore(i, loc);
         }
     }
 
     public static void readCommonExploreSection() throws GameActionException {
+        startBytecode("readCommonExploreSection");
         commonExploreLoc = null;
         commonExploreDist = P_INF;
         log("Reading common explore section");
 
         readMessageSection(COMMON_EXPLORE_SECTION_ID, COMMON_EXPLORE_SECTION_OFFSET, COMMON_EXPLORE_SECTION_SIZE, false);
+        stopBytecode("readCommonExploreSection");
     }
 
     public static void readAllyUnitCount(int msgInfo, int msgIndex) throws GameActionException {

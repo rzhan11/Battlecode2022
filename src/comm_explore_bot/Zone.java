@@ -22,6 +22,7 @@ public class Zone {
     final public static int ZONE_UNKNOWN_FLAG = 0;
     final public static int ZONE_EMPTY_FLAG = 1;
     final public static int ZONE_MINE_FLAG = 2;
+    final public static int ZONE_LARGE_MINE_FLAG = 3;
 
     public static int[] loc2Zone(MapLocation loc) {
         return new int[] {loc.x / ZONE_SIZE, loc.y / ZONE_SIZE};
@@ -70,14 +71,6 @@ public class Zone {
     public static int[][] zoneDangerLastRound;
     public static int[][] zoneVisitLastRound;
 
-    /*
-    Zone counting - archons only
-     */
-    public static int unknownCount;
-    public static int unknownFrontierCount = 0;
-    public static int mineCount = 0;
-    public static boolean[][] isFrontierZone;
-
     public static void initZones() {
         ZONE_XNUM = (rc.getMapWidth() + ZONE_SIZE - 1) / ZONE_SIZE;
         ZONE_YNUM = (rc.getMapHeight() + ZONE_SIZE - 1) / ZONE_SIZE;
@@ -109,6 +102,9 @@ public class Zone {
                         color = RED;
                         break;
                     case ZONE_MINE_FLAG:
+                        color = YELLOW;
+                        break;
+                    case ZONE_LARGE_MINE_FLAG:
                         color = GREEN;
                         break;
 
@@ -149,9 +145,105 @@ public class Zone {
             writeReportResource(zx, zy, zoneResourceStatus[zx][zy]);
 
             if (myType == ARCHON) {
-                Archon.updateResourceZoneCount(oldStatus, zoneResourceStatus[zx][zy], zx, zy);
+                updateResourceZoneCount(oldStatus, zoneResourceStatus[zx][zy], zx, zy);
             }
         }
 
+    }
+
+
+    /*
+    Zone counting - archons only
+     */
+    public static int unknownCount;
+    public static int unknownFrontierCount = 0;
+    public static int mineCount = 0;
+    public static boolean[][] isFrontierZone;
+
+    public static void updateResourceZoneCount(int oldStatus, int newStatus, int zx, int zy) {
+        // track zone string
+        ZoneString.setExplored(zx * ZONE_YNUM + zy, newStatus != 0);
+
+        if (oldStatus == newStatus) {
+            return;
+        }
+
+        // decrement unknown/frontier
+        switch (oldStatus) {
+            case ZONE_UNKNOWN_FLAG:
+                unknownCount--;
+                if (isFrontierZone[zx][zy]) {
+                    unknownFrontierCount--;
+                }
+                isFrontierZone[zx][zy] = false;
+
+                // increment new frontiers
+                // cardinal
+                if (zx + 1 < ZONE_XNUM) {
+                    // right
+                    if (zoneResourceStatus[zx + 1][zy] == ZONE_UNKNOWN_FLAG && !isFrontierZone[zx + 1][zy]) {
+                        isFrontierZone[zx + 1][zy] = true;
+                        unknownFrontierCount++;
+                    }
+                    // right-up
+                    if (zy + 1 < ZONE_YNUM && zoneResourceStatus[zx + 1][zy + 1] == ZONE_UNKNOWN_FLAG && !isFrontierZone[zx + 1][zy + 1]) {
+                        isFrontierZone[zx + 1][zy + 1] = true;
+                        unknownFrontierCount++;
+                    }
+                    // right-down
+                    if (zy > 0 && checkValidZone(zx + 1, zy - 1) && zoneResourceStatus[zx + 1][zy - 1] == ZONE_UNKNOWN_FLAG && !isFrontierZone[zx + 1][zy - 1]) {
+                        isFrontierZone[zx + 1][zy - 1] = true;
+                        unknownFrontierCount++;
+                    }
+                }
+                if (zx > 0) {
+                    if (checkValidZone(zx - 1, zy) && zoneResourceStatus[zx - 1][zy] == ZONE_UNKNOWN_FLAG && !isFrontierZone[zx - 1][zy]) {
+                        isFrontierZone[zx - 1][zy] = true;
+                        unknownFrontierCount++;
+                    }
+                    if (zy + 1 < ZONE_YNUM && zoneResourceStatus[zx - 1][zy + 1] == ZONE_UNKNOWN_FLAG && !isFrontierZone[zx - 1][zy + 1]) {
+                        isFrontierZone[zx - 1][zy + 1] = true;
+                        unknownFrontierCount++;
+                    }
+                    if (zy > 0 && zoneResourceStatus[zx - 1][zy - 1] == ZONE_UNKNOWN_FLAG && !isFrontierZone[zx - 1][zy - 1]) {
+                        isFrontierZone[zx - 1][zy - 1] = true;
+                        unknownFrontierCount++;
+                    }
+                }
+                // up
+                if (zy + 1 < ZONE_YNUM && zoneResourceStatus[zx][zy + 1] == ZONE_UNKNOWN_FLAG && !isFrontierZone[zx][zy + 1]) {
+                    isFrontierZone[zx][zy + 1] = true;
+                    unknownFrontierCount++;
+                }
+                // down
+                if (zy > 0 && zoneResourceStatus[zx][zy - 1] == ZONE_UNKNOWN_FLAG && !isFrontierZone[zx][zy - 1]) {
+                    isFrontierZone[zx][zy - 1] = true;
+                    unknownFrontierCount++;
+                }
+                break;
+            case ZONE_EMPTY_FLAG:
+                break;
+            case ZONE_MINE_FLAG:
+                mineCount--;
+                break;
+            default:
+                logi("WARNING: 'updateResourceZoneCount' Unexpected zone flag1! " + zoneResourceStatus[zx][zy]);
+        }
+
+
+        switch (newStatus) {
+            case ZONE_UNKNOWN_FLAG:
+                if (roundNum > 1) {
+                    logi("WARNING: 'updateResourceZoneCount' Zone flag should not be possible " + zoneResourceStatus[zx][zy]);
+                }
+                break;
+            case ZONE_EMPTY_FLAG:
+                break;
+            case ZONE_MINE_FLAG:
+                mineCount++;
+                break;
+            default:
+                logi("WARNING: 'updateResourceZoneCount' Unexpected zone flag2! " + zoneResourceStatus[zx][zy]);
+        }
     }
 }

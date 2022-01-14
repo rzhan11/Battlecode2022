@@ -22,12 +22,13 @@ public class Archon extends Robot {
 
     // things to do on turn 1 of existence
     public static void firstTurnSetup() throws GameActionException {
-//        startBytecode("str");
-//        String s = "abc";
-//        stopBytecode("str");
-//        startBytecode("str2");
-//        String s2 = "abcdef";
-//        stopBytecode("str2");
+//        String s = ZoneString.getZoneMapString();
+//        int i = s.charAt(0);
+//        int j = s.indexOf((char)0);
+//
+//        log("oct: " + ZONE_TOTAL_NUM + " " + s + " " + i + " " + j);
+//
+//
 //        printBuffer();
 //        rc.resign();
 
@@ -58,7 +59,7 @@ public class Archon extends Robot {
         if (Archon.isPrimaryArchon()) { // broadcast if is primary archon
             Comms.broadcastResources();
 
-            if (roundNum % 50 == 2) { // common explore update frequency
+            if (roundNum % COMMON_EXPLORE_UPDATE_FREQ == 1) { // common explore update frequency
                 Comms.writeCommonExploreSection();
             }
 
@@ -74,9 +75,9 @@ public class Archon extends Robot {
         log("contact " + madeContact);
 
 
-        if (isPrimaryArchon()) {
-            Zone.displayZoneResourceStatus();
-        }
+//        if (isPrimaryArchon()) {
+//            Zone.displayZoneResourceStatus();
+//        }
 
         if (!rc.isActionReady()) {
             return;
@@ -183,91 +184,6 @@ public class Archon extends Robot {
 
     }
 
-    public static void updateResourceZoneCount(int oldStatus, int newStatus, int zx, int zy) {
-        if (oldStatus == newStatus) {
-            return;
-        }
-
-
-        // decrement unknown/frontier
-        switch (oldStatus) {
-            case ZONE_UNKNOWN_FLAG:
-                unknownCount--;
-                if (isFrontierZone[zx][zy]) {
-                    unknownFrontierCount--;
-                }
-                isFrontierZone[zx][zy] = false;
-
-                // increment new frontiers
-                // cardinal
-                if (zx + 1 < ZONE_XNUM) {
-                    // right
-                    if (zoneResourceStatus[zx + 1][zy] == ZONE_UNKNOWN_FLAG && !isFrontierZone[zx + 1][zy]) {
-                        isFrontierZone[zx + 1][zy] = true;
-                        unknownFrontierCount++;
-                    }
-                    // right-up
-                    if (zy + 1 < ZONE_YNUM && zoneResourceStatus[zx + 1][zy + 1] == ZONE_UNKNOWN_FLAG && !isFrontierZone[zx + 1][zy + 1]) {
-                        isFrontierZone[zx + 1][zy + 1] = true;
-                        unknownFrontierCount++;
-                    }
-                    // right-down
-                    if (zy > 0 && checkValidZone(zx + 1, zy - 1) && zoneResourceStatus[zx + 1][zy - 1] == ZONE_UNKNOWN_FLAG && !isFrontierZone[zx + 1][zy - 1]) {
-                        isFrontierZone[zx + 1][zy - 1] = true;
-                        unknownFrontierCount++;
-                    }
-                }
-                if (zx > 0) {
-                    if (checkValidZone(zx - 1, zy) && zoneResourceStatus[zx - 1][zy] == ZONE_UNKNOWN_FLAG && !isFrontierZone[zx - 1][zy]) {
-                        isFrontierZone[zx - 1][zy] = true;
-                        unknownFrontierCount++;
-                    }
-                    if (zy + 1 < ZONE_YNUM && zoneResourceStatus[zx - 1][zy + 1] == ZONE_UNKNOWN_FLAG && !isFrontierZone[zx - 1][zy + 1]) {
-                        isFrontierZone[zx - 1][zy + 1] = true;
-                        unknownFrontierCount++;
-                    }
-                    if (zy > 0 && zoneResourceStatus[zx - 1][zy - 1] == ZONE_UNKNOWN_FLAG && !isFrontierZone[zx - 1][zy - 1]) {
-                        isFrontierZone[zx - 1][zy - 1] = true;
-                        unknownFrontierCount++;
-                    }
-                }
-                // up
-                if (zy + 1 < ZONE_YNUM && zoneResourceStatus[zx][zy + 1] == ZONE_UNKNOWN_FLAG && !isFrontierZone[zx][zy + 1]) {
-                    isFrontierZone[zx][zy + 1] = true;
-                    unknownFrontierCount++;
-                }
-                // down
-                if (zy > 0 && zoneResourceStatus[zx][zy - 1] == ZONE_UNKNOWN_FLAG && !isFrontierZone[zx][zy - 1]) {
-                    isFrontierZone[zx][zy - 1] = true;
-                    unknownFrontierCount++;
-                }
-                break;
-            case ZONE_EMPTY_FLAG:
-                break;
-            case ZONE_MINE_FLAG:
-                mineCount--;
-                break;
-            default:
-                logi("WARNING: 'updateResourceZoneCount' Unexpected zone flag1! " + zoneResourceStatus[zx][zy]);
-        }
-
-
-        switch (newStatus) {
-            case ZONE_UNKNOWN_FLAG:
-                if (roundNum > 1) {
-                    logi("WARNING: 'updateResourceZoneCount' Zone flag should not be possible " + zoneResourceStatus[zx][zy]);
-                }
-                break;
-            case ZONE_EMPTY_FLAG:
-                break;
-            case ZONE_MINE_FLAG:
-                mineCount++;
-                break;
-            default:
-                logi("WARNING: 'updateResourceZoneCount' Unexpected zone flag2! " + zoneResourceStatus[zx][zy]);
-        }
-    }
-
     public static int minerGoal;
 
     public static void updateMinerGoal() {
@@ -307,7 +223,7 @@ public class Archon extends Robot {
     }
 
     public static Direction tryBuild(RobotType rt, MapLocation buildDest) throws GameActionException {
-        if (true || buildDest == null) { // build on cheapest tile
+        if (buildDest == null) { // build on cheapest tile
             Direction bestDir = null;
             int bestRubble = P_INF;
             for (Direction dir : DIRS) {

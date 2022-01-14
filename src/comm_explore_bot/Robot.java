@@ -81,6 +81,7 @@ public abstract class Robot extends Constants {
 
         // init resource zone
         Zone.initZones();
+        ZoneString.init();
 
 
         // printBuffer at end
@@ -122,7 +123,7 @@ public abstract class Robot extends Constants {
         // archon comm updates
         if (myType == ARCHON) {
             // archon location comms
-            if (roundNum == spawnRound) { // init
+            if (age == 0) { // init
                 Archon.myArchonIndex = Comms.findEmptyCell(ALLY_ARCHON_SECTION_OFFSET, ALLY_ARCHON_SECTION_SIZE);
                 Archon.archonSpawnBit = new int[MAX_ARCHONS];
             }
@@ -134,7 +135,7 @@ public abstract class Robot extends Constants {
 
         // clear message board on odd rounds
         if (myType == ARCHON) {
-            if (roundNum != spawnRound) {
+            if (age > 0) {
                 if (roundNum % 2 == 1 && Archon.isPrimaryArchon()) {
                     Comms.clearMessageBoard();
                 }
@@ -199,8 +200,8 @@ public abstract class Robot extends Constants {
         Comms.readAllyArchonSection();
 
         // skip these comms for non-archons on their spawn round
-        if (myType == ARCHON || roundNum != spawnRound) {
-            if (roundNum % 10 == 1 || age == 1) {
+        if (myType == ARCHON || age > 0) {
+            if (roundNum % COMMON_EXPLORE_UPDATE_FREQ == 1 || age == 1) {
                 Comms.readCommonExploreSection(); // no dependencies
             }
             if (roundNum % 2 == 0) { // read on even
@@ -267,8 +268,8 @@ public abstract class Robot extends Constants {
 //        ZoneUpdate.updateResourceZoneStatus(here.x, here.y); // report resource zone updates
         Zone.updateResourceZoneStatus(myZoneX, myZoneY); // report resource zone updates
         stopBytecode("updateResourceZoneStatus");
-//        updateResourceZoneStatusEdges(); // report resource zone updates for edge zones
-//        updateResourceZoneStatusSpeculative();
+        updateResourceZoneStatusEdges(); // report resource zone updates for edge zones
+        updateResourceZoneStatusSpeculative();
     }
 
 
@@ -294,7 +295,7 @@ public abstract class Robot extends Constants {
     Tries to update resource zone status of all detected lead locations
      */
     public static void updateResourceZoneStatusSpeculative() throws GameActionException {
-        if (myType.bytecodeLimit <= 7500 && roundNum == spawnRound) {
+        if (myType.bytecodeLimit <= 7500 && age == 0) {
             return;
         }
 
@@ -307,13 +308,13 @@ public abstract class Robot extends Constants {
                 maxSearchCount = 0;
                 break;
             case 7500:
-                maxSearchCount = 16;
+                maxSearchCount = 5;
                 break;
             case 10000:
-                maxSearchCount = 32;
+                maxSearchCount = 17;
                 break;
             case 20000:
-                maxSearchCount = 64;
+                maxSearchCount = 33;
                 break;
             default:
                 maxSearchCount = 0;
@@ -330,7 +331,7 @@ public abstract class Robot extends Constants {
             int zy = loc.y / ZONE_SIZE;
             if (zoneResourceStatus[zx][zy] != ZONE_MINE_FLAG) {
                 if (myType == ARCHON) {
-                    Archon.updateResourceZoneCount(zoneResourceStatus[zx][zy], ZONE_MINE_FLAG, zx, zy);
+                    Zone.updateResourceZoneCount(zoneResourceStatus[zx][zy], ZONE_MINE_FLAG, zx, zy);
                 }
                 zoneResourceStatus[zx][zy] = ZONE_MINE_FLAG;
                 writeReportResource(zx, zy, ZONE_MINE_FLAG);
@@ -345,7 +346,7 @@ public abstract class Robot extends Constants {
             int zy = loc.y / ZONE_SIZE;
             if (zoneResourceStatus[zx][zy] != ZONE_MINE_FLAG) {
                 if (myType == ARCHON) {
-                    Archon.updateResourceZoneCount(zoneResourceStatus[zx][zy], ZONE_MINE_FLAG, zx, zy);
+                    Zone.updateResourceZoneCount(zoneResourceStatus[zx][zy], ZONE_MINE_FLAG, zx, zy);
                 }
                 zoneResourceStatus[zx][zy] = ZONE_MINE_FLAG;
                 writeReportResource(zx, zy, ZONE_MINE_FLAG);

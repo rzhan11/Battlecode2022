@@ -8,12 +8,12 @@ import static comm_explore_bot.Zone.*;
 
 
 public class Miner extends Robot {
-    public static boolean useSimpleExplore;
+//    public static boolean useSimpleExplore;
     final public static int ZONE_DANGER_WAIT = 10;
 
     public static void firstTurnSetup() throws GameActionException {
         // first turn comms
-        useSimpleExplore = random() < 0;
+//        useSimpleExplore = random() < 0;
 
 
 //        if (roundNum > 50) {
@@ -51,11 +51,11 @@ public class Miner extends Robot {
 
 
         // put role-specific updates here
-        startBytecode("updateMomentum");
-        if (!useSimpleExplore)  {
-            Explore.updateMomentum();
-        }
-        stopBytecode("updateMomentum");
+//        startBytecode("updateMomentum");
+//        if (!useSimpleExplore)  {
+//            Explore.updateMomentum();
+//        }
+//        stopBytecode("updateMomentum");
 
         startBytecode("updateDanger");
         updateDanger();
@@ -71,11 +71,13 @@ public class Miner extends Robot {
                 tryMine();
                 stopBytecode("tryMine1");
 
-                Actions.doStoredMove();
+                if (wouldMineLoc == null) {
+                    Actions.doStoredMove();
+                    startBytecode("tryMine1.5");
+                    tryMine();
+                    stopBytecode("tryMine1.5");
+                }
 
-                startBytecode("tryMine1.5");
-                tryMine();
-                stopBytecode("tryMine1.5");
             } else {
                 // new location is better
                 Actions.doStoredMove();
@@ -117,7 +119,7 @@ public class Miner extends Robot {
         if (visibleLeadLocs.length > 0){
             startBytecode("mine - checkLead");
             log("num lead " + visibleLeadLocs.length);
-            if (visibleLeadLocs.length > 34) { // 68 / 2
+            if (visibleLeadLocs.length > 16) { // 68 / 2
                 visibleLeadLocs = rc.senseNearbyLocationsWithLead(8);
             }
 
@@ -143,23 +145,12 @@ public class Miner extends Robot {
             }
         }
 
-        // explore
-//        if (useSimpleExplore) { // pick random
-//            Direction moveDir = Explore.exploreSimple();
-//            return moveDir;
-//        } else { // use momentum
-
         // go towards unknown zones
         {
-            // check if target zones are known
-            if (targetZoneLoc != null && zoneResourceStatus[targetZoneX][targetZoneY] != ZONE_UNKNOWN_FLAG) {
-                targetZoneLoc = null;
-            }
+            // update target zones
+            updateResourceZoneTargets();
 
-            if (targetZoneLoc == null) {
-                updateResourceZoneTargets();
-            }
-
+            // go to target zone
             if (targetZoneLoc != null) {
                 Direction moveDir = BFS.move(targetZoneLoc);
                 rc.setIndicatorString("going to target zone " + targetZoneLoc);
@@ -169,8 +160,14 @@ public class Miner extends Robot {
         }
 
 
-        Direction moveDir = Explore.exploreMomentum();
+
+        // explore
+//        if (useSimpleExplore) { // pick random
+        Direction moveDir = Explore.exploreSimple();
         return moveDir;
+//        } else { // use momentum
+//        Direction moveDir = Explore.exploreMomentum();
+//        return moveDir;
     }
 
     public static MapLocation closestDangerLoc;
@@ -240,6 +237,12 @@ public class Miner extends Robot {
     public static MapLocation targetZoneLoc = null;
 
     public static void updateResourceZoneTargets() {
+        // reset if needed
+        if (targetZoneLoc != null && zoneResourceStatus[targetZoneX][targetZoneY] != ZONE_UNKNOWN_FLAG) {
+            targetZoneLoc = null;
+        }
+
+        // find best new target
         int[] unknownZone = null;
         MapLocation unknownZoneLoc = null;
         int[] mineZone = null;
@@ -270,13 +273,24 @@ public class Miner extends Robot {
             }
         }
 
+        // if no target was found, use comm'd target
+        if (unknownZoneLoc == null && Comms.commonExploreLoc != null) {
+            unknownZoneLoc = Comms.commonExploreLoc;
+            unknownZone = new int[] {unknownZoneLoc.x / ZONE_SIZE, unknownZoneLoc.y / ZONE_SIZE};
+            log("[USING] comm loc " + unknownZoneLoc + " " + unknownZone[0] + " " + unknownZone[1]);
+        }
+
         if (unknownZoneLoc != null) {
+            if (targetZoneLoc != null) { // skip sometimes if already have a target
+                int curDist = here.distanceSquaredTo(targetZoneLoc);
+                int newDist = here.distanceSquaredTo(unknownZoneLoc);
+                if (!(newDist < curDist - 100)) { // must be better by sqrt(100) in r1 dist
+                    return; // skip if not a lot better
+                }
+            }
             targetZoneX = unknownZone[0];
             targetZoneY = unknownZone[1];
             targetZoneLoc = unknownZoneLoc;
-//        } else {
-//            targetZone = mineZone;
-//            targetZoneLoc = mineZoneLoc;
         }
     }
 
@@ -291,11 +305,12 @@ public class Miner extends Robot {
 
         // mine lead if adjacent to it
         for (int i = adjGoldLocs.length; --i >= 0;) {
-            while (rc.senseGold(adjGoldLocs[i]) > 0) {
+            MapLocation loc = adjGoldLocs[i];
+            while (rc.senseGold(loc) > 0) {
                 if (rc.isActionReady()) {
-                    Actions.doMineGold(adjGoldLocs[i]);
+                    Actions.doMineGold(loc);
                 } else {
-                    wouldMineLoc = adjGoldLocs[i];
+                    wouldMineLoc = loc;
                     return;
                 }
             }
@@ -303,14 +318,33 @@ public class Miner extends Robot {
 
         MapLocation[] adjLeadLocs = rc.senseNearbyLocationsWithLead(2);
         for (int i = adjLeadLocs.length; --i >= 0;) {
-            while (rc.senseLead(adjLeadLocs[i]) > 1) {
+            MapLocation loc = adjLeadLocs[i];
+            while (rc.senseLead(loc) > 1) {
                 if (rc.isActionReady()) {
-                    Actions.doMineLead(adjLeadLocs[i]);
+                    Actions.doMineLead(loc);
                 } else {
-                    wouldMineLoc = adjLeadLocs[i];
+                    wouldMineLoc = loc;
                     return;
                 }
             }
         }
+    }
+
+    public static int countMineActions() throws GameActionException {
+        int numActions = 0;
+
+        MapLocation[] adjGoldLocs = rc.senseNearbyLocationsWithGold(2);
+        for (int i = adjGoldLocs.length; --i >= 0;) {
+            MapLocation loc = adjGoldLocs[i];
+            numActions += rc.senseGold(loc);
+        }
+
+        MapLocation[] adjLeadLocs = rc.senseNearbyLocationsWithLead(2, 2);
+        for (int i = adjLeadLocs.length; --i >= 0;) {
+            MapLocation loc = adjLeadLocs[i];
+            numActions += rc.senseLead(loc) -1;
+        }
+
+        return numActions;
     }
 }
