@@ -3,6 +3,7 @@ package comm_explore_bot;
 import battlecode.common.*;
 import static battlecode.common.Direction.*;
 
+import static comm_explore_bot.Debug.*;
 import static comm_explore_bot.Map.*;
 import static comm_explore_bot.Robot.*;
 import static comm_explore_bot.Zone.*;
@@ -76,6 +77,7 @@ u_z_4_4(zx, zy);
 return;
 }
 }
+logi("WARNING: 'ZoneUpdate.updateResourceZoneStatus' should not reach here " + zx + " " + zy + " " + dx + " " + dy);
 }
 public static void u_z_1_1(int zx, int zy) throws GameActionException {
 MapLocation loc = new MapLocation(zx * ZONE_SIZE, zy * ZONE_SIZE);

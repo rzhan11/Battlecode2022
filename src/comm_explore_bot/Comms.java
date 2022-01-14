@@ -501,26 +501,33 @@ public class Comms {
     final public static int BROADCAST_RESOURCE_MSG_PER_ROUND = BROADCAST_RESOURCE_SECTION_SIZE * BROADCAST_RESOURCE_CELL_DENSITY;
 
     /*
-    0-7 | Zone
-    8-9 | Status
+    0-13 | Zone
      */
     public static void writeBroadcastResource(int index) throws GameActionException {
+        // insert in reverse order
+        int zoneIndex = (getBroadcastZoneIndex(index) + BROADCAST_RESOURCE_CELL_DENSITY) % ZONE_TOTAL_NUM; // start at end
+        int zx = zoneIndex / ZONE_YNUM;
+        int zy = zoneIndex % ZONE_YNUM;
         log("Writing 'Broadcast Resource' " + index);
-
-        int zoneIndex = getBroadcastZone(index);
+        tlog("zoneIndex " + zoneIndex + " " + zx + " " + zy);
+        int[] zoneRow = zoneResourceStatus[zx];
 
         int msg = 0;
 
         for (int i = BROADCAST_RESOURCE_CELL_DENSITY; --i >= 0;) {
-            if (zoneIndex >= ZONE_TOTAL_NUM) {
-                zoneIndex -= ZONE_TOTAL_NUM;
+            zy--;
+            if (zy == -1) {
+                zy += ZONE_YNUM; // should be ZONE_YNUM - 1
+                zx--;
+                if (zx == -1) {
+                    zx += ZONE_XNUM; // should be ZONE_XNUM - 1
+                }
+                zoneRow = zoneResourceStatus[zx];
             }
 
-            int zx = zoneIndex % ZONE_XNUM;
-            int zy = zoneIndex / ZONE_XNUM;
+            msg = (msg + zoneRow[zy]) << BROADCAST_RESOURCE_SHIFT;
 
-            msg = (msg + zoneResourceStatus[zx][zy]) << BROADCAST_RESOURCE_SHIFT;
-
+            /*
             // draw resource zone
             {
                 MapLocation loc = new MapLocation(zx * ZONE_SIZE, zy * ZONE_SIZE);
@@ -541,12 +548,12 @@ public class Comms {
                 }
                 Debug.drawDot(loc, color);
 
-            }
+            }*/
 
             // draw danger zone
             {
                 MapLocation loc = new MapLocation(zx * ZONE_SIZE + 1, zy * ZONE_SIZE + 1);
-                int[] color = PINK;
+                int[] color;
                 if (zoneDangerLastRound[zx][zy] == 0) {
                     color = GRAY;
                 } else if (roundNum - zoneDangerLastRound[zx][zy] <= Miner.ZONE_DANGER_WAIT) {
@@ -556,8 +563,6 @@ public class Comms {
                 }
                 Debug.drawDot(loc, color);
             }
-
-            zoneIndex++;
         }
         msg = msg >> BROADCAST_RESOURCE_SHIFT;
 
@@ -565,54 +570,36 @@ public class Comms {
     }
 
     public static void readBroadcastResource(int msgInfo, int msgIndex) throws GameActionException {
+        int zoneIndex = getBroadcastZoneIndex(msgIndex);
+        int zx = zoneIndex / ZONE_YNUM;
+        int zy = zoneIndex % ZONE_YNUM;
         log("Reading 'Broadcast Resource' " + msgInfo + " " + msgIndex);
+        tlog("zoneIndex " + zoneIndex + " " + zx + " " + zy);
 
-        int zoneIndex = (getBroadcastZone(msgIndex) + BROADCAST_RESOURCE_CELL_DENSITY) % ZONE_TOTAL_NUM;
+        int[] zoneRow = zoneResourceStatus[zx];
 
         for (int i = BROADCAST_RESOURCE_CELL_DENSITY; --i >= 0;) {
-            zoneIndex--;
-            if (zoneIndex < 0) {
-                zoneIndex += ZONE_TOTAL_NUM;
-            }
-
-            int zx = zoneIndex % ZONE_XNUM;
-            int zy = zoneIndex / ZONE_XNUM;
-            int status = msgInfo & BROADCAST_RESOURCE_MASK;
-
             if (myType == ARCHON) {
-                Archon.updateResourceZoneCount(zoneResourceStatus[zx][zy], status, zx, zy);
+                int status = msgInfo & BROADCAST_RESOURCE_MASK;
+                // update based on old vs new
+                Archon.updateResourceZoneCount(zoneRow[zy], status, zx, zy);
             }
-            zoneResourceStatus[zx][zy] = status;
+            zoneRow[zy] = msgInfo & BROADCAST_RESOURCE_MASK;
 
             msgInfo = msgInfo >> BROADCAST_RESOURCE_SHIFT;
+
+            zy++;
+            if (zy == ZONE_YNUM) {
+                zy = 0;
+                zx++;
+                if (zx == ZONE_XNUM) {
+                    zx = 0;
+                }
+                zoneRow = zoneResourceStatus[zx];
+            }
         }
         //
     }
-
-    /*public static void readBroadcastResource(int msgInfo, int msgIndex) throws GameActionException {
-//        log("Reading 'Broadcast Resource' " + msgInfo + " " + msgIndex);
-
-        int zoneIndex = (getBroadcastZone(msgIndex) + BROADCAST_RESOURCE_CELL_DENSITY) % ZONE_TOTAL_NUM;
-
-        for (int i = BROADCAST_RESOURCE_CELL_DENSITY; --i >= 0;) {
-            zoneIndex--;
-            if (zoneIndex < 0) {
-                zoneIndex += ZONE_TOTAL_NUM;
-            }
-
-            int zx = zoneIndex % ZONE_XNUM;
-            int zy = zoneIndex / ZONE_XNUM;
-            int status = msgInfo & BROADCAST_RESOURCE_MASK;
-
-            if (myType == ARCHON) {
-                Archon.updateResourceZoneCount(zoneResourceStatus[zx][zy], status, zx, zy);
-            }
-            zoneResourceStatus[zx][zy] = status;
-
-            msgInfo = msgInfo >> BROADCAST_RESOURCE_SHIFT;
-        }
-        //
-    }*/
 
     public static void broadcastResources() throws GameActionException {
         startBytecode("broadcastResources");
@@ -635,9 +622,9 @@ public class Comms {
     Returns broadcast zone based on msgIndex and roundNum
     msgIndex is the relative index
      */
-    public static int getBroadcastZone(int msgIndex) {
+    public static int getBroadcastZoneIndex(int msgIndex) {
         // based on curRoundNum
-        int startIndex = (roundNum - 1) * BROADCAST_RESOURCE_MSG_PER_ROUND;
+        int startIndex = roundNum * BROADCAST_RESOURCE_MSG_PER_ROUND;
         return (startIndex + msgIndex * BROADCAST_RESOURCE_CELL_DENSITY) % ZONE_TOTAL_NUM;
     }
 

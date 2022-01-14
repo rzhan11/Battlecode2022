@@ -4,6 +4,8 @@ import battlecode.common.*;
 
 import static comm_explore_bot.Debug.*;
 import static comm_explore_bot.Utils.*;
+import static comm_explore_bot.Zone.*;
+
 
 public class Miner extends Robot {
     public static boolean useSimpleExplore;
@@ -22,6 +24,32 @@ public class Miner extends Robot {
 
     // code run each turn
     public static void turn() throws GameActionException {
+        log(here + " " + targetZoneLoc + " " + zoneResourceStatus[4][3]);
+        if (myID == 15259) {
+            // draw resource zone
+            {
+                MapLocation loc = new MapLocation(2 * ZONE_SIZE, 1 + 5 * ZONE_SIZE);
+                int[] color = PINK;
+                switch (zoneResourceStatus[2][5]) {
+                    case ZONE_UNKNOWN_FLAG:
+                        color = BLACK;
+                        break;
+                    case ZONE_EMPTY_FLAG:
+                        color = RED;
+                        break;
+                    case ZONE_MINE_FLAG:
+                        color = GREEN;
+                        break;
+
+                    default:
+//                        logi("WARNING: 'displayZoneStatus' Unknown zone status! " + zoneResourceStatus[zx][zy]);
+                }
+                Debug.drawDot(loc, color);
+
+            }
+        }
+
+
         // put role-specific updates here
         startBytecode("updateMomentum");
         if (!useSimpleExplore)  {
@@ -85,9 +113,9 @@ public class Miner extends Robot {
         }
 
         // go to good lead locs
-        {
+        MapLocation[] visibleLeadLocs = rc.senseNearbyLocationsWithLead(myVisionRadius, 2);
+        if (visibleLeadLocs.length > 0){
             startBytecode("mine - checkLead");
-            MapLocation[] visibleLeadLocs = rc.senseNearbyLocationsWithLead(myVisionRadius, 2);
             log("num lead " + visibleLeadLocs.length);
             if (visibleLeadLocs.length > 34) { // 68 / 2
                 visibleLeadLocs = rc.senseNearbyLocationsWithLead(8);
@@ -120,9 +148,29 @@ public class Miner extends Robot {
 //            Direction moveDir = Explore.exploreSimple();
 //            return moveDir;
 //        } else { // use momentum
+
+        // go towards unknown zones
+        {
+            // check if target zones are known
+            if (targetZoneLoc != null && zoneResourceStatus[targetZoneX][targetZoneY] != ZONE_UNKNOWN_FLAG) {
+                targetZoneLoc = null;
+            }
+
+            if (targetZoneLoc == null) {
+                updateResourceZoneTargets();
+            }
+
+            if (targetZoneLoc != null) {
+                Direction moveDir = BFS.move(targetZoneLoc);
+                rc.setIndicatorString("going to target zone " + targetZoneLoc);
+                drawLine(here, targetZoneLoc, BLUE);
+                return moveDir;
+            }
+        }
+
+
         Direction moveDir = Explore.exploreMomentum();
         return moveDir;
-//        }
     }
 
     public static MapLocation closestDangerLoc;
@@ -186,6 +234,53 @@ public class Miner extends Robot {
             return Nav.fuzzyAway(closestDangerLoc);
         }
     }
+
+    public static int targetZoneX;
+    public static int targetZoneY;
+    public static MapLocation targetZoneLoc = null;
+
+    public static void updateResourceZoneTargets() {
+        int[] unknownZone = null;
+        MapLocation unknownZoneLoc = null;
+        int[] mineZone = null;
+        MapLocation mineZoneLoc = null;
+
+        int numOffsets = HardCode.ZONE_OFFSETS.length;
+        int randStartIndex = randInt(numOffsets);
+        for (int i = numOffsets; --i >= 0;) {
+            int[] diffs = HardCode.ZONE_OFFSETS[(i + randStartIndex) % numOffsets];
+            int zx = myZoneX + diffs[0];
+            int zy = myZoneY + diffs[1];
+            if (!checkValidZone(zx, zy)) {
+                continue;
+            }
+            switch (zoneResourceStatus[zx][zy]) {
+                case ZONE_UNKNOWN_FLAG:
+                    unknownZone = new int[] {zx, zy};
+                    unknownZoneLoc = zone2Loc(zx, zy);
+                    break;
+                case ZONE_EMPTY_FLAG:
+                    mineZone = new int[] {zx, zy};
+                    mineZoneLoc = zone2Loc(zx, zy);
+                    break;
+                case ZONE_MINE_FLAG:
+                    break;
+                default:
+                    logi("WARNING: 'updateResourceZoneTargets' Unexpected zone flag! " + zoneResourceStatus[zx][zy]);
+            }
+        }
+
+        if (unknownZoneLoc != null) {
+            targetZoneX = unknownZone[0];
+            targetZoneY = unknownZone[1];
+            targetZoneLoc = unknownZoneLoc;
+//        } else {
+//            targetZone = mineZone;
+//            targetZoneLoc = mineZoneLoc;
+        }
+    }
+
+
 
     public static MapLocation wouldMineLoc;
 

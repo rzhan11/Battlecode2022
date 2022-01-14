@@ -12,6 +12,7 @@ file_contents = f"""package {PACKAGE_NAME};
 import battlecode.common.*;
 import static battlecode.common.Direction.*;
 
+import static {PACKAGE_NAME}.Debug.*;
 import static {PACKAGE_NAME}.Map.*;
 import static {PACKAGE_NAME}.Robot.*;
 import static {PACKAGE_NAME}.Zone.*;
@@ -40,6 +41,7 @@ return;
     file_contents += "}\n" # end of inner switch
 
 file_contents += "}\n" # end of switch
+file_contents += f"""logi("WARNING: 'ZoneUpdate.updateResourceZoneStatus' should not reach here " + zx + " " + zy + " " + dx + " " + dy);\n"""
 file_contents += "}\n" # end of method
 
 

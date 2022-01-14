@@ -14,7 +14,7 @@ public class HardCode {
             case WATCHTOWER:
                 break;
             case MINER:
-//                init_ZONE_OFFSETS();
+                init_ZONE_OFFSETS();
                 break;
 //                initBFS20();
             case BUILDER:
