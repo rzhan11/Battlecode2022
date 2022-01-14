@@ -13,13 +13,12 @@ public class Explore {
     public static void init() {
     }
 
+    // todo:
     /*
     Have soldiers go to symmetric locations to check for enemy archons
      */
     public static Direction explore() {
         return null;
     }
-
-
 
 }

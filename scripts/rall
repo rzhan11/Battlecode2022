@@ -2,8 +2,8 @@ cd ..
 
 ./gradlew run \
 -PteamA=comm_explore_bot \
--PteamB=comm_explore_bot_nolog \
--Pmaps=rivers \
+-PteamB=comm_explore_bot_nolog_nolog \
+-Pmaps=colosseum,eckleburg,fortress,intersection,jellyfish,nottestsmall,progress,rivers,sandwich,squer,underground,valley \
 -PprofilerEnabled=false \
 2>&1 | tee scripts/logs/log.txt
 

@@ -1,12 +1,12 @@
-package comm_explore_bot;
+package new_bot;
 
 import battlecode.common.*;
 import org.hamcrest.generator.qdox.model.annotation.AnnotationGreaterEquals;
 
-import static comm_explore_bot.Comms.*;
-import static comm_explore_bot.Debug.*;
-import static comm_explore_bot.Utils.*;
-import static comm_explore_bot.Zone.*;
+import static new_bot.Comms.*;
+import static new_bot.Debug.*;
+import static new_bot.Utils.*;
+import static new_bot.Zone.*;
 
 
 public class Miner extends Robot {

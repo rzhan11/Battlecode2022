@@ -1,9 +1,9 @@
-package comm_explore_bot;
+package new_bot;
 
 import battlecode.common.*;
 
-import static comm_explore_bot.Debug.*;
-import static comm_explore_bot.Robot.*;
+import static new_bot.Debug.*;
+import static new_bot.Robot.*;
 
 public class Map {
     public static int XMAX;

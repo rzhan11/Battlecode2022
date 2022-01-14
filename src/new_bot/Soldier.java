@@ -1,9 +1,9 @@
-package comm_explore_bot;
+package new_bot;
 
 import battlecode.common.*;
 import static battlecode.common.RobotType.*;
 
-import static comm_explore_bot.Debug.*;
+import static new_bot.Debug.*;
 
 public class Soldier extends Robot {
     // constants

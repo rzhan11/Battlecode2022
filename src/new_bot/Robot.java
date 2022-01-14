@@ -1,13 +1,13 @@
-package comm_explore_bot;
+package new_bot;
 
 import battlecode.common.*;
 
 import static battlecode.common.RobotType.*;
 
-import static comm_explore_bot.Comms.*;
-import static comm_explore_bot.Debug.*;
-import static comm_explore_bot.Zone.*;
-import static comm_explore_bot.Utils.*;
+import static new_bot.Comms.*;
+import static new_bot.Debug.*;
+import static new_bot.Zone.*;
+import static new_bot.Utils.*;
 
 public abstract class Robot extends Constants {
 

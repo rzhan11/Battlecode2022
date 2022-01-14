@@ -19,8 +19,6 @@ import static {PACKAGE_NAME}.Zone.*;
 
 public class ZoneUpdate {{
 
-public static int curLead;
-
 public static void updateResourceZoneStatus(int zx, int zy) throws GameActionException {{
 
 int dx = Math.min(ZONE_SIZE, mapWidth - zx * ZONE_SIZE);

@@ -1,8 +1,8 @@
 cd ..
 
 ./gradlew run \
--PteamA=comm_explore_bot \
--PteamB=sprint_bot \
+-PteamA=new_bot \
+-PteamB=examplefuncsplayer \
 -Pmaps=rivers \
 -PprofilerEnabled=false \
 2>&1 | tee scripts/logs/log.txt
