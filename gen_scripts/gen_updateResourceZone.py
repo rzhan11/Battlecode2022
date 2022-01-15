@@ -26,6 +26,8 @@ public static void updateResourceZoneStatus(int zx, int zy) throws GameActionExc
 int dx = Math.min(ZONE_SIZE, mapWidth - zx * ZONE_SIZE);
 int dy = Math.min(ZONE_SIZE, mapHeight - zy * ZONE_SIZE);
 
+curLead = 0;
+
 switch (dx) {{
 """
 
@@ -37,6 +39,9 @@ switch (dy) {{
     for dy in range(1, ZONE_SIZE + 1):
         file_contents += f"""case {dy}:
 {get_method_name(dx, dy)}(zx, zy);
+if (curLead > 0) {{
+zoneResourceStatus[zx][zy] = ZONE_MINE_FLAG;
+}}
 return;
 """
 
@@ -53,11 +58,7 @@ MapLocation loc = new MapLocation(zx * ZONE_SIZE, zy * ZONE_SIZE);
 """
     for dx in range(dx_max):
         for dy in range(dy_max):
-            method_contents += f"""if (rc.senseLead(loc) > 0) {{
-zoneResourceStatus[zx][zy] = ZONE_MINE_FLAG;
-return;
-}}
-"""
+            method_contents += f"""curLead += rc.senseLead(loc);"""
             if dx % 2 == 0:
                 if dy == dy_max - 1:
                     dir_name = "EAST"

@@ -1,9 +1,9 @@
 cd ..
 
 ./gradlew run \
--PteamA=explore_bot \
--PteamB=pathing_bot_nolog \
--Pmaps=maptestsmall \
+-PteamA=archon_attack_bot \
+-PteamB=comm_explore_bot_nolog \
+-Pmaps=intersection \
 2>&1 | tee scripts/logs/log.txt
 
 #./gradlew run \

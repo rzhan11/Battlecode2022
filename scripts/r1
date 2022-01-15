@@ -1,7 +1,7 @@
 cd ..
 
 ./gradlew run \
--PteamA=new_bot \
+-PteamA=archon_attack_bot \
 -PteamB=examplefuncsplayer \
 -Pmaps=rivers \
 -PprofilerEnabled=false \
