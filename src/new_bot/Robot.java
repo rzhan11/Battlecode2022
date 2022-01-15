@@ -70,6 +70,9 @@ public abstract class Robot extends Constants {
         Debug.clearBuffer();
         log("INIT ROBOT");
 
+        // init nearby troops
+        initNearbyRobots();
+
         // init map
         Map.initMap();
         Explore.init();
@@ -98,10 +101,6 @@ public abstract class Robot extends Constants {
     public static int myZoneY;
     public static int roundNum;
     public static int age;
-
-    public static RobotInfo[] sensedRobots;
-    public static RobotInfo[] sensedAllies;
-    public static RobotInfo[] sensedEnemies;
 
     public static int timeSinceEnemy = 0;
 
@@ -136,11 +135,16 @@ public abstract class Robot extends Constants {
 
         // clear message board on odd rounds
         if (myType == ARCHON) {
+            Comms.sendStoredSpawnCommand();
             if (age > 0) {
                 if (roundNum % 2 == 1 && Archon.isPrimaryArchon()) {
                     Comms.clearMessageBoard();
                 }
             }
+        }
+
+        if (age == 0 && !myType.isBuilding()) {
+            Comms.readSpawnCommandSection();
         }
 
 
@@ -178,9 +182,7 @@ public abstract class Robot extends Constants {
         // update simple variables here
         myHealth = rc.getHealth();
 
-        sensedRobots = rc.senseNearbyRobots();
-        sensedAllies = rc.senseNearbyRobots(-1, us);
-        sensedEnemies = rc.senseNearbyRobots(-1, them);
+        updateNearbyRobots();
 
         if (sensedEnemies.length > 0) {
             timeSinceEnemy = 0;
@@ -200,6 +202,50 @@ public abstract class Robot extends Constants {
         myZoneY = here.y / ZONE_SIZE;
     }
 
+
+    public static RobotInfo[] sensedAllies;
+    public static RobotInfo[] sensedEnemies;
+
+    public static RobotInfo[] sensedAllySoldiers;
+    public static int sensedAllySoldierCount;
+    public static RobotInfo[] sensedEnemySoldiers;
+    public static int sensedEnemySoldierCount;
+
+    public static void initNearbyRobots() {
+        if (myType == LABORATORY) {
+            return;
+        }
+        int size = Utils.getMaxVisibleLocs(myType);
+        sensedAllySoldiers = new RobotInfo[size];
+        sensedEnemySoldiers = new RobotInfo[size];
+    }
+
+    public static void updateNearbyRobots() {
+        sensedAllies = rc.senseNearbyRobots(-1, us);
+        sensedEnemies = rc.senseNearbyRobots(-1, them);
+        if (myType == LABORATORY) {
+            return;
+        }
+
+        sensedAllySoldierCount = 0;
+        for (int i = sensedAllies.length; --i >= 0;) {
+            switch (sensedAllies[i].type) {
+                case SOLDIER:
+                    sensedAllySoldiers[sensedAllySoldierCount++] = sensedAllies[i];
+                    break;
+            }
+        }
+
+        sensedEnemySoldierCount = 0;
+        for (int i = sensedEnemies.length; --i >= 0;) {
+            switch (sensedEnemies[i].type) {
+                case SOLDIER:
+                    sensedEnemySoldiers[sensedEnemySoldierCount++] = sensedEnemies[i];
+                    break;
+            }
+        }
+    }
+
     public static void readRelevantComms() throws GameActionException {
 //        if (myType == MINER) {
 //            return;
@@ -208,7 +254,7 @@ public abstract class Robot extends Constants {
         Comms.readAllyArchonSection();
 
         if (myType == MINER) {
-            Comms.readMineHelpSection();
+//            Comms.readMineHelpSection();
         }
 
         // skip these comms for non-archons on their spawn round

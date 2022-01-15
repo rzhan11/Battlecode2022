@@ -48,7 +48,7 @@ public class Debug {
         }
         switch (myType) {
             case ARCHON:      return true;
-            case LABORATORY:  return true;
+            case LABORATORY:  return false;
             case WATCHTOWER:  return true;
             case MINER:       return true;
             case BUILDER:     return true;

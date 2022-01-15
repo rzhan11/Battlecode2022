@@ -71,6 +71,7 @@ public class Actions {
     public static void doDisintegrate() throws GameActionException {
         drawDot(here, BLACK);
         log("DISINTEGRATING " + here);
+        printBuffer();
         rc.disintegrate();
     }
 
@@ -90,5 +91,10 @@ public class Actions {
         drawLine(here, rc.adjacentLocation(dir), CYAN);
         log("BUILDING " + type + " " + dir);
         rc.buildRobot(type, dir);
+    }
+
+    public static void doResign() {
+        printBuffer();
+        rc.resign();
     }
 }

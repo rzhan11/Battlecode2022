@@ -38,7 +38,7 @@ public class BFS {
     }
 
     public static Direction move(MapLocation target, boolean greedy) throws GameActionException {
-        if (here == target) {
+        if (here.isWithinDistanceSquared(target, 0)) {
             logi("WARNING: 'BFS.move' Already reached target");
             return null;
         }

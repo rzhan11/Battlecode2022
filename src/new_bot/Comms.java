@@ -159,35 +159,39 @@ public class Comms {
     final public static int SPAWN_COUNT_SECTION_OFFSET = ALLY_ARCHON_SECTION_OFFSET + ALLY_ARCHON_SECTION_SIZE;
     final public static int SPAWN_COUNT_SECTION_SIZE = 1;
 
-    final public static int ENEMY_ARCHON_SECTION_ID = 2;
-    final public static int ENEMY_ARCHON_SECTION_OFFSET = SPAWN_COUNT_SECTION_OFFSET + SPAWN_COUNT_SECTION_SIZE;
+    final public static int SPAWN_COMMAND_SECTION_ID = 2;
+    final public static int SPAWN_COMMAND_SECTION_OFFSET = SPAWN_COUNT_SECTION_OFFSET + SPAWN_COUNT_SECTION_SIZE;
+    final public static int SPAWN_COMMAND_SECTION_SIZE = 4;
+
+    final public static int ENEMY_ARCHON_SECTION_ID = 3;
+    final public static int ENEMY_ARCHON_SECTION_OFFSET = SPAWN_COMMAND_SECTION_OFFSET + SPAWN_COMMAND_SECTION_SIZE;
     final public static int ENEMY_ARCHON_SECTION_SIZE = 4;
 
-    final public static int FLAG_SECTION_ID = 3;
+    final public static int FLAG_SECTION_ID = 4;
     final public static int FLAG_SECTION_OFFSET = ENEMY_ARCHON_SECTION_OFFSET + ENEMY_ARCHON_SECTION_SIZE;
     final public static int FLAG_SECTION_SIZE = 1;
 
-    final public static int REPORT_RESOURCE_SECTION_ID = 4;
+    final public static int REPORT_RESOURCE_SECTION_ID = 5;
     final public static int REPORT_RESOURCE_SECTION_OFFSET = FLAG_SECTION_OFFSET + FLAG_SECTION_SIZE;
     final public static int REPORT_RESOURCE_SECTION_SIZE = 16;
 
-    final public static int BROADCAST_RESOURCE_SECTION_ID = 5;
+    final public static int BROADCAST_RESOURCE_SECTION_ID = 6;
     final public static int BROADCAST_RESOURCE_SECTION_OFFSET = REPORT_RESOURCE_SECTION_OFFSET + REPORT_RESOURCE_SECTION_SIZE;
     final public static int BROADCAST_RESOURCE_SECTION_SIZE = 4;
 
-    final public static int REPORT_ENEMY_SECTION_ID = 6;
+    final public static int REPORT_ENEMY_SECTION_ID = 7;
     final public static int REPORT_ENEMY_SECTION_OFFSET = BROADCAST_RESOURCE_SECTION_OFFSET + BROADCAST_RESOURCE_SECTION_SIZE;
     final public static int REPORT_ENEMY_SECTION_SIZE = 8;
 
-    final public static int COMMON_EXPLORE_SECTION_ID = 7;
+    final public static int COMMON_EXPLORE_SECTION_ID = 8;
     final public static int COMMON_EXPLORE_SECTION_OFFSET = REPORT_ENEMY_SECTION_OFFSET + REPORT_ENEMY_SECTION_SIZE;
     final public static int COMMON_EXPLORE_SECTION_SIZE = 4;
 
-    final public static int ALLY_UNIT_COUNT_SECTION_ID = 8;
+    final public static int ALLY_UNIT_COUNT_SECTION_ID = 9;
     final public static int ALLY_UNIT_COUNT_SECTION_OFFSET = COMMON_EXPLORE_SECTION_OFFSET + COMMON_EXPLORE_SECTION_SIZE;
     final public static int ALLY_UNIT_COUNT_SECTION_SIZE = 5;
 
-    final public static int MINE_HELP_SECTION_ID = 9;
+    final public static int MINE_HELP_SECTION_ID = 10;
     final public static int MINE_HELP_SECTION_OFFSET = ALLY_UNIT_COUNT_SECTION_OFFSET + ALLY_UNIT_COUNT_SECTION_SIZE;
     final public static int MINE_HELP_SECTION_SIZE = 5;
 
@@ -272,6 +276,9 @@ public class Comms {
                     break;
                 case SPAWN_COUNT_SECTION_ID:
                     readSpawnCount(msgInfo);
+                    break;
+                case SPAWN_COMMAND_SECTION_ID:
+                    readSpawnCommand(msgInfo, msgIndex);
                     break;
                 case ENEMY_ARCHON_SECTION_ID:
                     // todo
@@ -470,6 +477,47 @@ public class Comms {
 
     public static void readSpawnCountSection() throws GameActionException {
         readMessageSection(SPAWN_COUNT_SECTION_ID, SPAWN_COUNT_SECTION_OFFSET, SPAWN_COUNT_SECTION_SIZE, false);
+    }
+
+    public static int storedSpawnCommand = -1;
+
+    public static void sendStoredSpawnCommand() throws GameActionException {
+        if (storedSpawnCommand != -1) {
+            writeCell(storedSpawnCommand, SPAWN_COMMAND_SECTION_OFFSET + Archon.myArchonIndex);
+            storedSpawnCommand = -1;
+        } else {
+            rc.writeSharedArray(SPAWN_COMMAND_SECTION_OFFSET + Archon.myArchonIndex, 0);
+        }
+    }
+
+    /*
+    0-2 | dir
+    3-14 | command
+     */
+    public static void writeSpawnCommand(Direction dir, int command) throws GameActionException {
+        log("Writing 'Spawn Command' " + dir + " " + command);
+
+        int msg = (command << 3) + Map.dir2int(dir);
+
+        storedSpawnCommand = msg;
+    }
+
+    public static void readSpawnCommand(int msgInfo, int msgIndex) throws GameActionException {
+        log("Reading 'Spawn Command' " + msgInfo + " " + msgIndex);
+
+        // dir
+        Direction dir = DIRS[msgInfo & MASK3];
+        MapLocation loc = allyArchonLocs[msgIndex].add(dir);
+        if (here.equals(loc)) {
+            int command = msgInfo >>> 3;
+            tlog("[ME] " + command);
+        } else {
+            tlog("[NOT ME]");
+        }
+    }
+
+    public static void readSpawnCommandSection() throws GameActionException {
+        readMessageSection(SPAWN_COMMAND_SECTION_ID, SPAWN_COMMAND_SECTION_OFFSET, SPAWN_COMMAND_SECTION_SIZE, false);
     }
 
     /*

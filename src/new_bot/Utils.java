@@ -207,4 +207,21 @@ public class Utils {
 
     }
 
+    public static int getMaxVisibleLocs(RobotType rt) {
+        switch (rt) {
+            case ARCHON:
+            case WATCHTOWER:
+            case SAGE:
+                return 108;
+            case SOLDIER:
+            case MINER:
+            case BUILDER:
+                return 68;
+            case LABORATORY:
+                return -1;
+        }
+        logi("WARNING: 'getMaxVisibleLocs' should not reach here " + rt);
+        return -1;
+    }
+
 }

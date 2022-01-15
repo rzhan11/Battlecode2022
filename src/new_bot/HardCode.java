@@ -21,6 +21,7 @@ public class HardCode {
                 break;
 //                initBFS20();
             case SOLDIER:
+                init_ZONE_OFFSETS();
                 break;
 //                initBFS20();
             case SAGE:

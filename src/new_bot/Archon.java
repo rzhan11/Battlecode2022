@@ -96,10 +96,17 @@ public class Archon extends Robot {
 
                 Direction dir = tryBuild(nextSpawnType, buildDest);
                 if (dir != null) {
-                    pickNextSpawnType();
-                    numSpawns++;
+                    // send command
+                    Comms.writeSpawnCommand(dir, 17);
+
+
+
+                    // update team variables
                     teamSpawnCount = (teamSpawnCount + 1) % rc.getArchonCount();
                     Comms.writeSpawnCount(teamSpawnCount);
+                    // update self variables
+                    pickNextSpawnType();
+                    numSpawns++;
                     return;
                 }
             }
@@ -215,7 +222,7 @@ public class Archon extends Robot {
             }
         }
 
-        if (bestLoc == null || bestLoc == here) {
+        if (bestLoc == null || bestLoc.equals(here)) {
             return null;
         } else {
             return bestLoc;

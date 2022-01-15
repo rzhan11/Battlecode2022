@@ -203,4 +203,141 @@ public class Explore {
         } while (here.isWithinDistanceSquared(exploreLoc, EXPLORE_DISTANCE_REQ));
     }
 
+
+    public static int targetZoneX;
+    public static int targetZoneY;
+    public static MapLocation targetZoneLoc = null;
+
+    public static void findNewMineZone() {
+        int[] bestZone = null;
+        MapLocation bestLoc = null;
+
+        int numOffsets = HardCode.ZONE_OFFSETS.length;
+        int randStartIndex = randInt(numOffsets);
+        for (int i = numOffsets; --i >= 0;) {
+            int[] diffs = HardCode.ZONE_OFFSETS[(i + randStartIndex) % numOffsets];
+            int zx = myZoneX + diffs[0];
+            int zy = myZoneY + diffs[1];
+            if (!checkValidZone(zx, zy)) {
+                continue;
+            }
+            switch (zoneResourceStatus[zx][zy]) {
+                case ZONE_UNKNOWN_FLAG:
+                    break;
+                case ZONE_EMPTY_FLAG:
+                    break;
+                case ZONE_MINE_FLAG:
+                    if (zoneVisitLastRound[zx][zy] > 0) {
+                        if (roundNum - zoneVisitLastRound[zx][zy] <= 40) {
+                            continue; // skip if too recent
+                        }
+                    }
+                    bestZone = new int[] {zx, zy};
+                    bestLoc = zone2Loc(zx, zy);
+                    break;
+                default:
+                    logi("WARNING: 'updateResourceZoneTargets' Unexpected zone flag! " + zoneResourceStatus[zx][zy]);
+            }
+            // check if done
+            if (bestLoc != null) {
+                break;
+            }
+        }
+
+        // if no target was found, use comm'd target
+        if (bestLoc == null && Comms.commonExploreLoc != null) {
+            bestLoc = Comms.commonExploreLoc;
+            bestZone = new int[] {bestLoc.x / ZONE_SIZE, bestLoc.y / ZONE_SIZE};
+            switch (zoneResourceStatus[bestZone[0]][bestZone[1]]) {
+                case ZONE_UNKNOWN_FLAG:
+                case ZONE_MINE_FLAG:
+                    log("[USING] comm loc " + bestLoc + " " + bestZone[0] + " " + bestZone[1]);
+                    break;
+                default:
+                    bestLoc = null;
+                    bestZone = null;
+                    break;
+            }
+        }
+
+
+        if (bestLoc != null) {
+            if (targetZoneLoc != null) { // skip sometimes if already have a target
+                if (zoneResourceStatus[targetZoneX][targetZoneY] == ZONE_MINE_FLAG) { //SPECIAL
+                    double curDist = Math.sqrt(here.distanceSquaredTo(targetZoneLoc));
+                    double newDist = Math.sqrt(here.distanceSquaredTo(bestLoc));
+                    if (!(newDist < curDist - 10)) { // must be better by 10 in r1 dist
+                        return;
+                    }
+                }
+            }
+            targetZoneX = bestZone[0];
+            targetZoneY = bestZone[1];
+            targetZoneLoc = bestLoc;
+        }
+    }
+
+    public static void findNewUnknownZone() {
+        int[] bestZone = null;
+        MapLocation bestLoc = null;
+
+        int numOffsets = HardCode.ZONE_OFFSETS.length;
+        int randStartIndex = randInt(numOffsets);
+        for (int i = numOffsets; --i >= 0;) {
+            int[] diffs = HardCode.ZONE_OFFSETS[(i + randStartIndex) % numOffsets];
+            int zx = myZoneX + diffs[0];
+            int zy = myZoneY + diffs[1];
+            if (!checkValidZone(zx, zy)) {
+                continue;
+            }
+            switch (zoneResourceStatus[zx][zy]) {
+                case ZONE_UNKNOWN_FLAG:
+                    bestZone = new int[] {zx, zy};
+                    bestLoc = zone2Loc(zx, zy);
+                    break;
+                case ZONE_EMPTY_FLAG:
+                    break;
+                case ZONE_MINE_FLAG:
+                    break;
+                default:
+                    logi("WARNING: 'updateResourceZoneTargets' Unexpected zone flag! " + zoneResourceStatus[zx][zy]);
+            }
+            // check if done
+            if (bestLoc != null) {
+                break;
+            }
+        }
+
+        // if no target was found, use comm'd target
+        if (bestLoc == null && Comms.commonExploreLoc != null) {
+            bestLoc = Comms.commonExploreLoc;
+            bestZone = new int[] {bestLoc.x / ZONE_SIZE, bestLoc.y / ZONE_SIZE};
+            switch (zoneResourceStatus[bestZone[0]][bestZone[1]]) {
+                case ZONE_UNKNOWN_FLAG:
+                    log("[USING] comm loc " + bestLoc + " " + bestZone[0] + " " + bestZone[1]);
+                    break;
+                default:
+                    bestLoc = null;
+                    bestZone = null;
+                    break;
+            }
+        }
+
+
+        if (bestLoc != null) {
+            if (targetZoneLoc != null) { // skip sometimes if already have a target
+                double curDist = Math.sqrt(here.distanceSquaredTo(targetZoneLoc));
+                double newDist = Math.sqrt(here.distanceSquaredTo(bestLoc));
+                if (!(newDist < curDist - 10)) { // must be better by 10 in r1 dist
+                    return;
+                }
+            }
+            targetZoneX = bestZone[0];
+            targetZoneY = bestZone[1];
+            targetZoneLoc = bestLoc;
+        }
+    }
+
+
+
 }

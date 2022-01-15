@@ -125,6 +125,39 @@ public class Nav {
 
     /*
     Move to better tile (less rubble)
+    isGood - if we want to improve local economy (yes if we control, no if we don't)
+     */
+    public static Direction moveSuicideTile(boolean isGood) throws GameActionException {
+        Direction bestDir = null;
+        double bestScore = N_INF;
+        for (int i = ALL_DIRS.length; --i >= 0;) {
+            Direction dir = ALL_DIRS[i];
+            if (checkDirMoveable(dir) || dir == Direction.CENTER) {
+                MapLocation loc = rc.adjacentLocation(dir);
+                double score = -rc.senseRubble(loc);
+                if (rc.senseLead(loc) == 0) {
+                    score += 1e6;
+                }
+                if (!isGood) {
+                    score = -score;
+                }
+                if (score > bestScore) {
+                    bestDir = dir;
+                    bestScore = score;
+                }
+            }
+        }
+
+        if (bestDir != Direction.CENTER) {
+            Actions.doMove(bestDir);
+            return bestDir;
+        } else {
+            return null;
+        }
+    }
+
+    /*
+    Move to better tile (less rubble)
      */
     public static Direction moveBetterTile() throws GameActionException {
         Direction[] tryDirs = getClosestDirs(getRandomDir());
@@ -134,7 +167,8 @@ public class Nav {
         for (int i = tryDirs.length; --i >= 0;) {
             Direction dir = tryDirs[i];
             if (checkDirMoveable(dir)) {
-                int rubble = rc.senseRubble(here);
+                MapLocation loc = rc.adjacentLocation(dir);
+                int rubble = rc.senseRubble(loc);
                 if (rubble < bestRubble) {
                     bestDir = dir;
                     bestRubble = rubble;

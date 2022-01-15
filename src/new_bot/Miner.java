@@ -1,10 +1,10 @@
 package new_bot;
 
 import battlecode.common.*;
-import org.hamcrest.generator.qdox.model.annotation.AnnotationGreaterEquals;
 
 import static new_bot.Comms.*;
 import static new_bot.Debug.*;
+import static new_bot.Explore.*;
 import static new_bot.Utils.*;
 import static new_bot.Zone.*;
 
@@ -13,6 +13,7 @@ public class Miner extends Robot {
 //    public static boolean useSimpleExplore;
     final public static int ZONE_DANGER_WAIT = 10;
     public static boolean willHelpMine;
+    public static boolean isFarmer;
 
     public static void firstTurnSetup() throws GameActionException {
         // first turn comms
@@ -21,6 +22,7 @@ public class Miner extends Robot {
 
     // code run each turn
     public static void turn() throws GameActionException {
+        log("is farmer " + isFarmer);
         // check aggression
         updateAggression();
 
@@ -115,6 +117,10 @@ public class Miner extends Robot {
             stopBytecode("mine - checkLead");
 
             if (bestLoc != null) {
+                if (bestLoc.equals(here)) {
+                    rc.setIndicatorString("chilling at lead " + bestLoc);
+                    return null;
+                }
                 Direction moveDir = BFS.move(bestLoc);
                 rc.setIndicatorString("going to lead@" + bestLoc);
                 Debug.drawLine(here, bestLoc, RED);
@@ -154,13 +160,17 @@ public class Miner extends Robot {
         // go towards unknown zones
         {
             // update target zones
-            updateResourceZoneTargets();
+            updateTargetZone();
 
             // go to target zone
             if (targetZoneLoc != null) {
                 Direction moveDir = BFS.move(targetZoneLoc);
                 rc.setIndicatorString("going to target zone " + targetZoneLoc);
-                drawLine(here, targetZoneLoc, BLUE);
+                if (isFarmer) {
+                    drawLine(here, targetZoneLoc, CYAN);
+                } else {
+                    drawLine(here, targetZoneLoc, BLUE);
+                }
                 return moveDir;
             }
         }
@@ -217,14 +227,12 @@ public class Miner extends Robot {
     public static void updateDanger() throws GameActionException {
         closestDangerLoc = null;
         closestDangerDist = P_INF;
-        for (int i = sensedEnemies.length; --i >= 0;) { // iterates from (len - 1) -> 0 inclusive
-            RobotInfo ri = sensedEnemies[i];
-            if (ri.type.canAttack()) {
-                int dist = here.distanceSquaredTo(ri.location);
-                if (dist < closestDangerDist) {
-                    closestDangerLoc = ri.location;
-                    closestDangerDist = dist;
-                }
+        for (int i = sensedEnemySoldierCount; --i >= 0;) { // iterates from (len - 1) -> 0 inclusive
+            RobotInfo ri = sensedEnemySoldiers[i];
+            int dist = here.distanceSquaredTo(ri.location);
+            if (dist < closestDangerDist) {
+                closestDangerLoc = ri.location;
+                closestDangerDist = dist;
             }
         }
 
@@ -233,106 +241,46 @@ public class Miner extends Robot {
         } else {
             turnsSinceDanger = 0;
             lastSeenDangerLoc = closestDangerLoc;
-
-            // reset resource zone target if danger
-//            if (targetZoneLoc != null) {
-//                if (checkSimilarDir(here.directionTo(targetZoneLoc), here.directionTo(closestDangerLoc))) {
-//                    resetTargetResourceZone();
-//                }
-//            }
-
-            // reset explore loc if danger
-//            if (exploreLoc != null) {
-//                if (checkSimilarDir(here.directionTo(exploreLoc), here.directionTo(closestDangerLoc))) {
-//                    chooseNewExploreLoc(0);
-//                }
-//            }
         }
     }
 
     public static Direction avoidDanger() throws GameActionException {
-        if (Explore.allyAttackCount >= Explore.enemyAttackCount) {
+        log("danger " + sensedAllySoldierCount + " " + sensedEnemySoldierCount);
+
+        if (sensedAllySoldierCount >= sensedEnemySoldierCount) {
             return null; // ignore danger if in conflict zone
         }
 
         if (closestDangerLoc == null) {
-//            if (turnsSinceMucker <= FLEE_MEMORY) {
-//                log("Memory flee " + lastSeenMucker);
-//                return fuzzyAway(lastSeenMucker);
-//            } else {
-//                log("No recent muckers");
-//                return null;
-//            }
             log("No recent danger");
             return null;
         } else {
+            rc.setIndicatorString("avoid danger " + closestDangerLoc);
             return Nav.fuzzyAway(closestDangerLoc);
         }
     }
 
-    public static int targetZoneX;
-    public static int targetZoneY;
-    public static MapLocation targetZoneLoc = null;
 
-    public static void updateResourceZoneTargets() {
+    public static void updateTargetZone() {
         // reset if needed
-        if (targetZoneLoc != null && zoneResourceStatus[targetZoneX][targetZoneY] != ZONE_UNKNOWN_FLAG) {
-            targetZoneLoc = null;
-        }
-
-        // find best new target
-        int[] unknownZone = null;
-        MapLocation unknownZoneLoc = null;
-        int[] mineZone = null;
-        MapLocation mineZoneLoc = null;
-
-        int numOffsets = HardCode.ZONE_OFFSETS.length;
-        int randStartIndex = randInt(numOffsets);
-        for (int i = numOffsets; --i >= 0;) {
-            int[] diffs = HardCode.ZONE_OFFSETS[(i + randStartIndex) % numOffsets];
-            int zx = myZoneX + diffs[0];
-            int zy = myZoneY + diffs[1];
-            if (!checkValidZone(zx, zy)) {
-                continue;
-            }
-            switch (zoneResourceStatus[zx][zy]) {
-                case ZONE_UNKNOWN_FLAG:
-                    unknownZone = new int[] {zx, zy};
-                    unknownZoneLoc = zone2Loc(zx, zy);
-                    break;
-                case ZONE_EMPTY_FLAG:
-                    mineZone = new int[] {zx, zy};
-                    mineZoneLoc = zone2Loc(zx, zy);
-                    break;
-                case ZONE_MINE_FLAG:
-                    break;
-                default:
-                    logi("WARNING: 'updateResourceZoneTargets' Unexpected zone flag! " + zoneResourceStatus[zx][zy]);
-            }
-        }
-
-        // if no target was found, use comm'd target
-        if (unknownZoneLoc == null && Comms.commonExploreLoc != null) {
-            unknownZoneLoc = Comms.commonExploreLoc;
-            unknownZone = new int[] {unknownZoneLoc.x / ZONE_SIZE, unknownZoneLoc.y / ZONE_SIZE};
-            log("[USING] comm loc " + unknownZoneLoc + " " + unknownZone[0] + " " + unknownZone[1]);
-        }
-
-        if (unknownZoneLoc != null) {
-            if (targetZoneLoc != null) { // skip sometimes if already have a target
-                int curDist = here.distanceSquaredTo(targetZoneLoc);
-                int newDist = here.distanceSquaredTo(unknownZoneLoc);
-                if (!(newDist < curDist - 100)) { // must be better by sqrt(100) in r1 dist
-                    return; // skip if not a lot better
+        if (targetZoneLoc != null) {
+            if (isFarmer) {
+                if (zoneResourceStatus[targetZoneX][targetZoneY] != ZONE_MINE_FLAG) {
+                    targetZoneLoc = null;
+                }
+            } else {
+                if (zoneResourceStatus[targetZoneX][targetZoneY] != ZONE_UNKNOWN_FLAG) {
+                    targetZoneLoc = null;
                 }
             }
-            targetZoneX = unknownZone[0];
-            targetZoneY = unknownZone[1];
-            targetZoneLoc = unknownZoneLoc;
+        }
+
+        if (isFarmer) {
+            findNewMineZone();
+        } else {
+            findNewUnknownZone();
         }
     }
-
-
 
     public static boolean isAggressive;
     public static MapLocation wouldMineLoc;

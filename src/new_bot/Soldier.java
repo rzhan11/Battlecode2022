@@ -4,6 +4,8 @@ import battlecode.common.*;
 import static battlecode.common.RobotType.*;
 
 import static new_bot.Debug.*;
+import static new_bot.Explore.*;
+import static new_bot.Zone.*;
 
 public class Soldier extends Robot {
     // constants
@@ -294,9 +296,38 @@ public class Soldier extends Robot {
 //        }
 
 //        Explore.updateMomentum();
+
+
+
+        // go towards unknown zones
+        {
+            // update target zones
+            updateTargetZone();
+
+            // go to target zone
+            if (targetZoneLoc != null) {
+                Direction moveDir = BFS.move(targetZoneLoc);
+                rc.setIndicatorString("going to target zone " + targetZoneLoc);
+                drawLine(here, targetZoneLoc, BLUE);
+                return moveDir;
+            }
+        }
+
+
         Direction moveDir = Explore.exploreSimple();
         rc.setIndicatorString("exploring " + Explore.exploreLoc);
         return moveDir;
+    }
+
+    public static void updateTargetZone() {
+        // reset if needed
+        if (targetZoneLoc != null) {
+            if (zoneResourceStatus[targetZoneX][targetZoneY] != ZONE_UNKNOWN_FLAG) {
+                targetZoneLoc = null;
+            }
+        }
+
+        findNewUnknownZone();
     }
 
     final public static int STAY_HOME_LEAD_MAX = 300;
@@ -335,6 +366,13 @@ public class Soldier extends Robot {
         // can be healed
         if (here.isWithinDistanceSquared(archonLoc, ARCHON.actionRadiusSquared)) {
             // stay still
+            // if near home and has a lot of people to be healed
+            if (sensedAllySoldierCount >= 8 && myHealth <= 20 && sensedEnemySoldierCount == 0) {
+                Nav.moveSuicideTile(true);
+//                return null;
+                Actions.doDisintegrate();
+                return null;
+            }
             rc.setIndicatorString("at home");
             Nav.moveBetterTile(archonLoc, ARCHON.actionRadiusSquared);
             return null;
@@ -606,15 +644,15 @@ public class Soldier extends Robot {
         }
 
         // prefer danger
-        if (danger1) {
-            if (!danger2) {
-                return -10000;
-            }
-        } else {
-            if (danger2) {
-                return 10000;
-            }
-        }
+//        if (danger1) {
+//            if (!danger2) {
+//                return -10000;
+//            }
+//        } else {
+//            if (danger2) {
+//                return 10000;
+//            }
+//        }
 
         // prefer close
         return dist1 - dist2;
