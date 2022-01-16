@@ -161,6 +161,7 @@ public class Zone {
     public static boolean[][] isFrontierZone;
 
     public static void updateResourceZoneCount(int oldStatus, int newStatus, int zx, int zy) {
+        if (true) return;
         // track zone string
         ZoneString.setExplored(zx * ZONE_YNUM + zy, newStatus != 0);
 

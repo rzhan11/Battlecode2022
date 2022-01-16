@@ -269,12 +269,12 @@ public class Soldier extends Robot {
 //            }
 
             // if not currently in danger, but has dangerous target, go to dangerous target
-            if (closestEnemySoldier == null) {
-                if (targetEnemyLocDanger) {
-                    moveDir = goToTargetEnemy();
-                    return moveDir;
-                }
-            }
+//            if (closestEnemySoldier == null) {
+//                if (targetEnemyLocDanger) {
+//                    moveDir = goToTargetEnemy();
+//                    return moveDir;
+//                }
+//            }
 
             // chase current enemy
             moveDir = chaseNeutral();
@@ -556,6 +556,7 @@ public class Soldier extends Robot {
 
     public static MapLocation targetEnemyLoc;
     public static boolean targetEnemyLocDanger;
+    final public static int GOTO_TARGET_ENEMY_DIST = 8;
 
     private static Direction goToTargetEnemy() throws GameActionException {
         Direction moveDir = BFS.move(targetEnemyLoc);
@@ -567,8 +568,10 @@ public class Soldier extends Robot {
 
     public static void updateTargetEnemyLoc() {
         // if close enough to enemy, pick new area
-        if (targetEnemyLoc != null && here.isWithinDistanceSquared(targetEnemyLoc, 8)) {
-            resetTargetEnemyLoc();
+        if (targetEnemyLoc != null) {
+            if (checkResetTargetEnemyLoc(targetEnemyLoc)) {
+                resetTargetEnemyLoc();
+            }
         }
 
 
@@ -576,6 +579,11 @@ public class Soldier extends Robot {
         if (index >= 0) {
             MapLocation newLoc = Comms.reportedEnemyLocs[index];
             boolean newDanger = Comms.isReportedEnemyLocDanger[index];
+
+            // ensure is not super close location
+            if (checkResetTargetEnemyLoc(newLoc)) {
+                return;
+            }
 
             if (targetEnemyLoc == null) {
                 targetEnemyLoc = newLoc;
@@ -593,6 +601,10 @@ public class Soldier extends Robot {
                 }
             }
         }
+    }
+
+    public static boolean checkResetTargetEnemyLoc(MapLocation loc) {
+        return here.isWithinDistanceSquared(loc, GOTO_TARGET_ENEMY_DIST);
     }
 
     public static void resetTargetEnemyLoc() {
@@ -644,6 +656,18 @@ public class Soldier extends Robot {
     public static int compareEnemyLocs(MapLocation loc1, boolean danger1, MapLocation loc2, boolean danger2) {
         int dist1 = here.distanceSquaredTo(loc1);
         int dist2 = here.distanceSquaredTo(loc2);
+
+        // prefer not visible
+        if (checkResetTargetEnemyLoc(loc1)) { // loc1 is invalid
+            if (!checkResetTargetEnemyLoc(loc2)) { // loc2 is valid
+                return (int) 1e6;
+            }
+        } else { // loc1 is valid
+            if (checkResetTargetEnemyLoc(loc2)) { // loc1 is invalid
+                return (int) -1e6;
+            }
+        }
+
 
         // prefer not far
         if (dist1 >= MAX_REPORT_ENEMY_DIST) {

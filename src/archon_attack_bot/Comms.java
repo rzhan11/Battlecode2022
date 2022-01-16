@@ -571,7 +571,7 @@ public class Comms {
     public static void readReportResource(int msgInfo) throws GameActionException {
         int[] zone = bits2zone(msgInfo & ZONE_POS_MASK);
         int status = msgInfo >>> 8;
-        log("Reading 'Report Resource' " + zone[0] + " " + zone[1] + " s:" + status);
+//        log("Reading 'Report Resource' " + zone[0] + " " + zone[1] + " s:" + status);
 
         if (myType == ARCHON) {
             Zone.updateResourceZoneCount(zoneResourceStatus[zone[0]][zone[1]], status, zone[0], zone[1]);
@@ -748,7 +748,7 @@ public class Comms {
     public static void readReportEnemy(int msgInfo) throws GameActionException {
         int[] zone = bits2zone(msgInfo & ZONE_POS_MASK);
 //        int dangerBit = ;
-        log("Reading 'Report Enemy' " + zone[0] + " " + zone[1]);
+//        log("Reading 'Report Enemy' " + zone[0] + " " + zone[1]);
 
         // danger bit
         boolean hasDanger = ((msgInfo >> 8) & 1) == 1;

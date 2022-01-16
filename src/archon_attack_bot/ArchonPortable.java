@@ -2,16 +2,9 @@ package archon_attack_bot;
 
 import battlecode.common.*;
 
-import javax.swing.*;
-
-import static battlecode.common.RobotType.*;
-
 import static archon_attack_bot.Comms.*;
 import static archon_attack_bot.Debug.*;
 import static archon_attack_bot.HardCode.*;
-import static archon_attack_bot.Map.*;
-import static archon_attack_bot.Utils.*;
-import static archon_attack_bot.Zone.*;
 
 public class ArchonPortable extends Archon {
 
@@ -20,8 +13,10 @@ public class ArchonPortable extends Archon {
     public static int shouldTransformTurretRound;
     public static MapLocation settleLoc;
     public static int settleLocRubble;
+    public static int settleMoves;
 
-    final public static int SETTLE_PATIENCE = 20;
+    final public static int SETTLE_PATIENCE = 10;
+
 
     /*
     Called evertime we start this
@@ -31,6 +26,7 @@ public class ArchonPortable extends Archon {
         shouldTransformTurretRound = -1;
         settleLoc = null;
         settleLocRubble = -1;
+        settleMoves = 0;
     }
 
     public static void turn() throws GameActionException {
@@ -70,13 +66,14 @@ public class ArchonPortable extends Archon {
 
         if (shouldTransformTurret) {
             // try move
-            if (roundNum - shouldTransformTurretRound <= SETTLE_PATIENCE) {
+            if (settleMoves <= SETTLE_PATIENCE) {
                 if (rc.senseRubble(here) <= settleLocRubble) {
                     // settle if good enough
                     Actions.doTransform();
                     return;
                 } else {
                     Direction moveDir = BFS.move(settleLoc);
+                    settleMoves++;
                     return;
                 }
             } else { // if a lot of time has passed, use greedy
