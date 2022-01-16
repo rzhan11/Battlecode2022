@@ -254,9 +254,7 @@ public abstract class Robot extends Constants {
 //            Comms.readMineHelpSection();
         }
 
-        if (myType == ARCHON) {
-            Comms.readArchonMoveSection();
-        }
+        Comms.readArchonMoveSection();
 
         // skip these comms for non-archons on their spawn round
         if (myType == ARCHON || age > 0) {

@@ -1,6 +1,7 @@
 package archon_attack_bot;
 
 import battlecode.common.*;
+
 import static battlecode.common.RobotType.*;
 
 import static archon_attack_bot.Debug.*;
@@ -33,7 +34,7 @@ public class Soldier extends Robot {
 
         // go home
         updateHomeLoc();
-        log("home " + homeLoc + " "+ rc.getHealth());
+        log("home " + homeLoc + " " + rc.getHealth());
         if (homeLoc != null) {
             if (rc.isMovementReady()) {
                 Direction moveDir = moveHome();
@@ -76,7 +77,7 @@ public class Soldier extends Robot {
 
         smartAttack_BestOurDPS = N_INF; // reset this variable
         smartAttack_BestOurDPSDir = Direction.CENTER;
-        for (int i = DIRS.length; --i >= 0;) {
+        for (int i = DIRS.length; --i >= 0; ) {
             Direction dir = ALL_DIRS[i];
 
             double localBestScore = getSmartAttackScore(dir);
@@ -100,7 +101,7 @@ public class Soldier extends Robot {
         }
 
         // if there is a target that can be hit
-            // move if needed
+        // move if needed
         String text = "smart: ";
 
         if (bestMoveDir != null) {
@@ -151,7 +152,7 @@ public class Soldier extends Robot {
 
         double bestTheirDPSDecrease = 0.0;
         double ourHurt = 0.0;
-        for (int j = curEnemyDangerCount; --j >= 0;) {
+        for (int j = curEnemyDangerCount; --j >= 0; ) {
             RobotInfo ri = curEnemyDangers[j];
             MapLocation loc = ri.location;
             if (destLoc.isWithinDistanceSquared(loc, myActionRadius)) { // if i can hit it
@@ -222,7 +223,7 @@ public class Soldier extends Robot {
 
         // todo: optimize for dense units
 
-        for (int i = sensedEnemies.length; --i >= 0;) {
+        for (int i = sensedEnemies.length; --i >= 0; ) {
             RobotInfo ri = sensedEnemies[i];
             switch (ri.type) {
 //                case SAGE:
@@ -247,17 +248,16 @@ public class Soldier extends Robot {
         }
 
 
-
         MapLocation closestEnemySoldier = getClosestEnemySoldier();
         // if in range of enemy and attack is on cooldown, move away from enemy soldiers
         if (!rc.isActionReady() && closestEnemySoldier != null) {
             Direction moveDir = runAwayFromEnemy();
-            rc.setIndicatorString("flee " );
+            rc.setIndicatorString("flee ");
             return moveDir;
         }
 
         updateTargetEnemyLoc();
-        log("target " + targetEnemyLoc + " " +targetEnemyLocDanger);
+        log("target " + targetEnemyLoc + " " + targetEnemyLocDanger);
 
         // if enemies are visible, but too far, chase
         // should automatically target the closest one
@@ -307,7 +307,6 @@ public class Soldier extends Robot {
 //        Explore.updateMomentum();
 
 
-
         // go towards unknown zones
 //        {
 //            // update target zones
@@ -342,6 +341,7 @@ public class Soldier extends Robot {
     final public static int STAY_HOME_LEAD_MAX = 300;
     final public static int HOME_LOC_UPDATE_FREQ = 10;
     public static MapLocation homeLoc;
+    public static int homeIndex;
     public static int homeLocRound = 0;
 
     /*
@@ -367,7 +367,9 @@ public class Soldier extends Robot {
 
         // if old data, update the homeLoc
         if (homeLoc != null && roundNum - homeLocRound >= HOME_LOC_UPDATE_FREQ) {
+            log("updating");
             homeLoc = getClosestAllyArchon(here, true);
+            tlog("" + homeLoc);
             homeLocRound = roundNum;
             return;
         }
@@ -403,7 +405,7 @@ public class Soldier extends Robot {
     public static MapLocation getClosestEnemySoldier() {
         RobotInfo bestEnemy = null;
         int bestDist = P_INF;
-        for (int i = sensedEnemies.length; --i >= 0;) {
+        for (int i = sensedEnemies.length; --i >= 0; ) {
             RobotInfo ri = sensedEnemies[i];
             if (ri.type == SOLDIER) {
                 int dist = here.distanceSquaredTo(ri.location);
@@ -457,14 +459,13 @@ public class Soldier extends Robot {
         }
 
 
-
         MapLocation bestLoc = null;
         int bestDist = P_INF;
         if (sensedEnemies.length > 20) {
             bestLoc = sensedEnemies[0].location;
             bestDist = here.distanceSquaredTo(bestLoc);
         } else {
-            for (int i = sensedEnemies.length; --i >= 0;) {
+            for (int i = sensedEnemies.length; --i >= 0; ) {
                 MapLocation loc = sensedEnemies[i].location;
                 int dist = here.distanceSquaredTo(loc);
                 if (dist < bestDist) {
@@ -496,7 +497,7 @@ public class Soldier extends Robot {
 
         RobotInfo bestEnemy = null;
         int bestScore = N_INF;
-        for (int i = attackableEnemies.length; --i >= 0;) {
+        for (int i = attackableEnemies.length; --i >= 0; ) {
             int score = getAttackEnemyScore(attackableEnemies[i]);
             if (score > bestScore) {
                 bestEnemy = attackableEnemies[i];
@@ -622,13 +623,13 @@ public class Soldier extends Robot {
         int bestIndex = 0;
         MapLocation bestLoc = Comms.reportedEnemyLocs[0];
         boolean bestHasDanger = Comms.isReportedEnemyLocDanger[0];
-        for (int i = Comms.reportedEnemyCount; --i >= 0;) {
+        for (int i = Comms.reportedEnemyCount; --i >= 0; ) {
             MapLocation loc = Comms.reportedEnemyLocs[i];
             boolean hasDanger = Comms.isReportedEnemyLocDanger[i];
             if (compareEnemyLocs(loc, hasDanger, bestLoc, bestHasDanger) < 0) { // prefer new (1st) location
                 bestIndex = i;
                 bestLoc = loc;
-                bestHasDanger =  hasDanger;
+                bestHasDanger = hasDanger;
             }
         }
 

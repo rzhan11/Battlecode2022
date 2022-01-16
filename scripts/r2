@@ -2,8 +2,8 @@ cd ..
 
 ./gradlew run \
 -PteamA=archon_attack_bot \
--PteamB=comm_explore_bot_nolog \
--Pmaps=fortress \
+-PteamB=comm_explore_bot_nolog_nolog \
+-Pmaps=progress \
 -PprofilerEnabled=false \
 2>&1 | tee scripts/logs/log.txt
 
