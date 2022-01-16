@@ -1,12 +1,12 @@
-package archon_attack_bot;
+package explore2_bot;
 
 import battlecode.common.*;
 
 import static battlecode.common.RobotType.*;
 
-import static archon_attack_bot.Debug.*;
-import static archon_attack_bot.Explore.*;
-import static archon_attack_bot.Zone.*;
+import static explore2_bot.Debug.*;
+import static explore2_bot.Explore.*;
+import static explore2_bot.Zone.*;
 
 public class Soldier extends Robot {
     // constants

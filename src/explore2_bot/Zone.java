@@ -1,12 +1,12 @@
-package archon_attack_bot;
+package explore2_bot;
 
 import battlecode.common.*;
 import static battlecode.common.RobotType.*;
 
-import static archon_attack_bot.Comms.writeReportResource;
-import static archon_attack_bot.Debug.*;
-import static archon_attack_bot.Map.*;
-import static archon_attack_bot.Robot.*;
+import static explore2_bot.Comms.writeReportResource;
+import static explore2_bot.Debug.*;
+import static explore2_bot.Map.*;
+import static explore2_bot.Robot.*;
 
 /*
 Responsible for tracking resources

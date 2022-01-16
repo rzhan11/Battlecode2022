@@ -1,13 +1,13 @@
-package archon_attack_bot;
+package explore2_bot;
 
 import battlecode.common.*;
 
 import static battlecode.common.RobotType.*;
 
-import static archon_attack_bot.Debug.*;
-import static archon_attack_bot.Zone.*;
-import static archon_attack_bot.Robot.*;
-import static archon_attack_bot.Utils.*;
+import static explore2_bot.Debug.*;
+import static explore2_bot.Zone.*;
+import static explore2_bot.Robot.*;
+import static explore2_bot.Utils.*;
 
 
 public class Comms {
@@ -432,7 +432,7 @@ public class Comms {
     }
 
     public static void readAllyArchon(int msgInfo, int archonIndex) throws GameActionException {
-        log("Reading 'Ally Archon' " + msgInfo + " " + archonIndex);
+//        log("Reading 'Ally Archon' " + msgInfo + " " + archonIndex);
 
         // location
         allyArchonLocs[archonIndex] = bits2loc(msgInfo & LOC_MASK);
@@ -470,7 +470,7 @@ public class Comms {
     public static int teamSpawnCount;
 
     public static void writeSpawnCount(int count) throws GameActionException {
-        log("Writing 'Spawn Count' " + count);
+//        log("Writing 'Spawn Count' " + count);
 
         int msg = count;
 
@@ -478,7 +478,7 @@ public class Comms {
     }
 
     public static void readSpawnCount(int msgInfo) throws GameActionException {
-        log("Reading 'Spawn Count' " + msgInfo);
+//        log("Reading 'Spawn Count' " + msgInfo);
         teamSpawnCount = msgInfo % rc.getArchonCount();
     }
 
@@ -510,21 +510,39 @@ public class Comms {
     }
 
     public static void readSpawnCommand(int msgInfo, int msgIndex) throws GameActionException {
-        log("Reading 'Spawn Command' " + msgInfo + " " + msgIndex);
+//        log("Reading 'Spawn Command' " + msgInfo + " " + msgIndex);
 
         // dir
         Direction dir = DIRS[msgInfo & MASK3];
         MapLocation loc = allyArchonLocs[msgIndex].add(dir);
         if (here.equals(loc)) {
             int command = msgInfo >>> 3;
-            tlog("[ME] " + command);
-        } else {
-            tlog("[NOT ME]");
+//            tlog("[ME] " + command);
+            switch(myType) {
+                case MINER:
+                    readMinerSpawnCommand(msgInfo >>> 3);
+                    break;
+            }
         }
     }
 
     public static void readSpawnCommandSection() throws GameActionException {
         readMessageSection(SPAWN_COMMAND_SECTION_ID, SPAWN_COMMAND_SECTION_OFFSET, SPAWN_COMMAND_SECTION_SIZE, false);
+    }
+
+
+    public static void writeMinerSpawnCommand(Direction buildDir) throws GameActionException {
+        MapLocation loc = Explore.getInitialExploreLoc();
+        int msg = loc2bits(loc);
+
+        writeSpawnCommand(buildDir, msg);
+    }
+
+    public static void readMinerSpawnCommand(int msg) throws GameActionException {
+        MapLocation loc = bits2loc(msg & LOC_MASK);
+        tlog("Reading 'Miner Spawn Command' " + loc);
+
+        Explore.initExploreLoc = loc;
     }
 
     final public static int ARCHON_MOVE_DELAY = 30;
@@ -642,18 +660,18 @@ public class Comms {
             }
 
             // draw danger zone
-            {
-                MapLocation loc = new MapLocation(zx * ZONE_SIZE + 1, zy * ZONE_SIZE + 1);
-                int[] color;
-                if (zoneDangerLastRound[zx][zy] == 0) {
-                    color = GRAY;
-                } else if (roundNum - zoneDangerLastRound[zx][zy] <= Miner.ZONE_DANGER_WAIT) {
-                    color = PINK;
-                } else {
-                    color = YELLOW;
-                }
-                Debug.drawDot(loc, color);
-            }
+//            {
+//                MapLocation loc = new MapLocation(zx * ZONE_SIZE + 1, zy * ZONE_SIZE + 1);
+//                int[] color;
+//                if (zoneDangerLastRound[zx][zy] == 0) {
+//                    color = GRAY;
+//                } else if (roundNum - zoneDangerLastRound[zx][zy] <= Miner.ZONE_DANGER_WAIT) {
+//                    color = PINK;
+//                } else {
+//                    color = YELLOW;
+//                }
+//                Debug.drawDot(loc, color);
+//            }
         }
         msg = msg >> BROADCAST_RESOURCE_SHIFT;
 

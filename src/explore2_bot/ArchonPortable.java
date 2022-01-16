@@ -1,10 +1,10 @@
-package archon_attack_bot;
+package explore2_bot;
 
 import battlecode.common.*;
 
-import static archon_attack_bot.Comms.*;
-import static archon_attack_bot.Debug.*;
-import static archon_attack_bot.HardCode.*;
+import static explore2_bot.Comms.*;
+import static explore2_bot.Debug.*;
+import static explore2_bot.HardCode.*;
 
 public class ArchonPortable extends Archon {
 

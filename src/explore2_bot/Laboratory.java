@@ -1,4 +1,4 @@
-package archon_attack_bot;
+package explore2_bot;
 
 import battlecode.common.*;
 

@@ -1,12 +1,12 @@
-package archon_attack_bot;
+package explore2_bot;
 
 import battlecode.common.*;
 
-import static archon_attack_bot.Comms.*;
-import static archon_attack_bot.Debug.*;
-import static archon_attack_bot.Explore.*;
-import static archon_attack_bot.Utils.*;
-import static archon_attack_bot.Zone.*;
+import static explore2_bot.Comms.*;
+import static explore2_bot.Debug.*;
+import static explore2_bot.Explore.*;
+import static explore2_bot.Utils.*;
+import static explore2_bot.Zone.*;
 
 
 public class Miner extends Robot {
@@ -125,6 +125,26 @@ public class Miner extends Robot {
                 Direction moveDir = BFS.move(bestLoc);
                 rc.setIndicatorString("going to lead@" + bestLoc);
                 Debug.drawLine(here, bestLoc, RED);
+                return moveDir;
+            }
+        }
+
+        // go to initExploreLoc
+        if (initExploreLoc != null){
+            // check if clear
+            if (here.isWithinDistanceSquared(initExploreLoc, myVisionRadius)) {
+                initExploreLoc = null;
+            }
+
+            if (age > 100) {
+                initExploreLoc = null;
+            }
+
+            if (initExploreLoc != null) {
+                MapLocation targetLoc = Map.getOffsetBounds(initExploreLoc, 3);
+                Direction moveDir = BFS.move(targetLoc);
+                rc.setIndicatorString("going to initLoc " + initExploreLoc);
+                drawLine(here, initExploreLoc, PURPLE);
                 return moveDir;
             }
         }

@@ -1,10 +1,10 @@
-package archon_attack_bot;
+package explore2_bot;
 
 import battlecode.common.*;
 
 import static battlecode.common.RobotType.*;
-import static archon_attack_bot.Debug.*;
-import static archon_attack_bot.Utils.*;
+import static explore2_bot.Debug.*;
+import static explore2_bot.Utils.*;
 
 public class Builder extends Robot {
     // constants

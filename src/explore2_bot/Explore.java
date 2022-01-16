@@ -1,12 +1,12 @@
-package archon_attack_bot;
+package explore2_bot;
 
 import battlecode.common.*;
 
-import static archon_attack_bot.Debug.*;
-import static archon_attack_bot.Map.*;
-import static archon_attack_bot.Robot.*;
-import static archon_attack_bot.Utils.*;
-import static archon_attack_bot.Zone.*;
+import static explore2_bot.Debug.*;
+import static explore2_bot.Map.*;
+import static explore2_bot.Robot.*;
+import static explore2_bot.Utils.*;
+import static explore2_bot.Zone.*;
 
 public class Explore {
     public static MapLocation exploreLoc;
@@ -338,6 +338,55 @@ public class Explore {
         }
     }
 
+
+
+    public static Direction[] exploreOrderDirs = new Direction[]{Direction.NORTHEAST, Direction.SOUTHWEST, Direction.NORTHWEST, Direction.SOUTHEAST, Direction.SOUTH, Direction.NORTH, Direction.WEST, Direction.EAST};
+    public static int exploreOrderDirIndex = 0;
+
+    public static MapLocation initExploreLoc;
+
+    public static MapLocation getInitialExploreLoc() {
+        Direction targetDir;
+        do {
+            targetDir = exploreOrderDirs[exploreOrderDirIndex];
+            exploreOrderDirIndex = (exploreOrderDirIndex + 1) % exploreOrderDirs.length;
+        } while(!checkGoodExploreDir(targetDir));
+
+        MapLocation loc = getFarthestLoc(here, targetDir.getDeltaX(), targetDir.getDeltaY());
+        return loc;
+    }
+
+    final public static int GOOD_EXPLORE_DIST = 4;
+
+    public static boolean checkGoodExploreDir(Direction dir) {
+        switch(dir.getDeltaX()) {
+            case -1:
+                // check left wall
+                if (here.x <= GOOD_EXPLORE_DIST) {
+                    return false;
+                }
+                break;
+            case 1:
+                if (XMAX - here.x <= GOOD_EXPLORE_DIST) {
+                    return false;
+                }
+                break;
+        }
+        switch(dir.getDeltaY()) {
+            case -1:
+                // check left wall
+                if (here.y <= GOOD_EXPLORE_DIST) {
+                    return false;
+                }
+                break;
+            case 1:
+                if (YMAX - here.y <= GOOD_EXPLORE_DIST) {
+                    return false;
+                }
+                break;
+        }
+        return true;
+    }
 
 
 }

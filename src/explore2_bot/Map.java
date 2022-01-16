@@ -1,9 +1,9 @@
-package archon_attack_bot;
+package explore2_bot;
 
 import battlecode.common.*;
 
-import static archon_attack_bot.Debug.*;
-import static archon_attack_bot.Robot.*;
+import static explore2_bot.Debug.*;
+import static explore2_bot.Robot.*;
 
 public class Map {
     public static int XMAX;
@@ -53,6 +53,23 @@ public class Map {
         } else { // use ymove
             return new MapLocation((int) wallX, endY);
         }
+    }
+
+    public static MapLocation getOffsetBounds(MapLocation loc, int offset) {
+        int x = loc.x;
+        int y = loc.y;
+        if (x < offset) {
+            x = offset;
+        } else if (x > XMAX - offset) {
+            x = XMAX - offset;
+        }
+
+        if (y < offset) {
+            y = offset;
+        } else if (y > YMAX - offset) {
+            y = YMAX - offset;
+        }
+        return new MapLocation(x, y);
     }
 
     /*

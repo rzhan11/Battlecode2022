@@ -1,13 +1,13 @@
-package archon_attack_bot;
+package explore2_bot;
 
 import battlecode.common.*;
 
 import java.util.HashMap;
 
-import static archon_attack_bot.Constants.*;
-import static archon_attack_bot.Debug.*;
-import static archon_attack_bot.Map.*;
-import static archon_attack_bot.Robot.*;
+import static explore2_bot.Constants.*;
+import static explore2_bot.Debug.*;
+import static explore2_bot.Map.*;
+import static explore2_bot.Robot.*;
 
 public class Bug extends Nav {
 

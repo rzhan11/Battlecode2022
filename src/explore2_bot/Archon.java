@@ -1,13 +1,13 @@
-package archon_attack_bot;
+package explore2_bot;
 
 import battlecode.common.*;
 
 import static battlecode.common.RobotType.*;
 
-import static archon_attack_bot.Comms.*;
-import static archon_attack_bot.Debug.*;
-import static archon_attack_bot.Utils.*;
-import static archon_attack_bot.Zone.*;
+import static explore2_bot.Comms.*;
+import static explore2_bot.Debug.*;
+import static explore2_bot.Utils.*;
+import static explore2_bot.Zone.*;
 
 public class Archon extends Robot {
     // constants
@@ -40,7 +40,7 @@ public class Archon extends Robot {
     public static void turn() throws GameActionException {
         myHealing = myType.getHealing(rc.getLevel());
 
-//        if (roundNum == 25) {
+//        if (roundNum == 5) {
 //            rc.resign();
 //        }
 
@@ -95,12 +95,42 @@ public class Archon extends Robot {
         log("should " + shouldTrySpawn + " " + rc.getTeamLeadAmount(us) + " " + nextSpawnType);
         if (shouldTrySpawn) {
             if (rc.getTeamLeadAmount(us) >= nextSpawnType.buildCostLead) {
-                MapLocation buildDest = getBuildDest();
+                MapLocation buildDest = null;
+                Direction dir = null;
+                switch(nextSpawnType) {
+                    case MINER:
+                        buildDest = getBuildDestMiner();
+                        dir = tryBuild(nextSpawnType, buildDest);
+                        break;
+                    case SOLDIER:
+                    case SAGE:
+                    case BUILDER:
+                        // get best tile
+                        if (sensedEnemies.length > 0) { // build on best tile if there are enemies
+                            dir = tryBuildBestRubble(nextSpawnType);
+                        } else {
+                            buildDest = getBuildDestSoldier();
+                            dir = tryBuild(nextSpawnType, buildDest);
+                        }
+                        break;
+                }
 
-                Direction dir = tryBuild(nextSpawnType, buildDest);
+
                 if (dir != null) {
                     // send command
-                    Comms.writeSpawnCommand(dir, 17);
+                    switch(nextSpawnType) {
+                        case MINER:
+                            writeMinerSpawnCommand(dir);
+                            break;
+                        case SOLDIER:
+                        case SAGE:
+                        case BUILDER:
+//                            writeSoldierSpawnCommand(dir);
+                            Comms.writeSpawnCommand(dir, 17);
+                            break;
+                        default:
+                            logi("WARNING: 'Archon.spawn' code should never reach here " + nextSpawnType);
+                    }
 
                     // update team variables
                     teamSpawnCount = (teamSpawnCount + 1) % rc.getArchonCount();
@@ -226,7 +256,7 @@ public class Archon extends Robot {
         rc.setIndicatorString(s);
     }
 
-    public static MapLocation getBuildDest() throws GameActionException {
+    public static MapLocation getBuildDestMiner() throws GameActionException {
         MapLocation[] leadLocs = rc.senseNearbyLocationsWithLead(myVisionRadius, 2);
         if (leadLocs.length > 64) {
             leadLocs = rc.senseNearbyLocationsWithLead(20);
@@ -250,31 +280,30 @@ public class Archon extends Robot {
         }
     }
 
+    public static MapLocation getBuildDestSoldier() throws GameActionException {
+        // find a target location
+        MapLocation bestLoc = null;
+        int bestDist = P_INF;
+        for (int i = reportedEnemyCount; --i >= 0;) {
+            MapLocation loc = reportedEnemyLocs[i];
+            int dist = here.distanceSquaredTo(loc);
+            if (dist < bestDist) {
+                bestDist = dist;
+                bestLoc = loc;
+            }
+        }
+
+        if (bestLoc == null || bestLoc.equals(here)) {
+            return null;
+        } else {
+            return bestLoc;
+        }
+    }
+
     public static Direction tryBuild(RobotType rt, MapLocation buildDest) throws GameActionException {
         if (buildDest == null) { // build on cheapest tile
-            Direction bestDir = null;
-            int bestRubble = P_INF;
-            for (Direction dir : DIRS) {
-                MapLocation loc = here.add(dir);
-                if (!rc.onTheMap(loc)) {
-                    continue;
-                }
-                if (rc.canSenseRobotAtLocation(loc)) { // skip if occupied
-                    continue;
-                }
-                int rubble = rc.senseRubble(loc);
-                if (rubble < bestRubble) {
-                    bestDir = dir;
-                    bestRubble = rubble;
-                }
-            }
-
-            if (bestDir != null) {
-                Actions.doBuildRobot(rt, bestDir);
-                return bestDir;
-            } else {
-                return null;
-            }
+            Direction buildDir = tryBuildBestRubble(rt);
+            return buildDir;
         }
 
         log("bfs " + buildDest);
@@ -284,6 +313,32 @@ public class Archon extends Robot {
         if (buildDir != null) {
             Actions.doBuildRobot(rt, buildDir);
             return buildDir;
+        } else {
+            return null;
+        }
+    }
+
+    public static Direction tryBuildBestRubble(RobotType rt) throws GameActionException {
+        Direction bestDir = null;
+        int bestRubble = P_INF;
+        for (Direction dir : DIRS) {
+            MapLocation loc = here.add(dir);
+            if (!rc.onTheMap(loc)) {
+                continue;
+            }
+            if (rc.canSenseRobotAtLocation(loc)) { // skip if occupied
+                continue;
+            }
+            int rubble = rc.senseRubble(loc);
+            if (rubble < bestRubble) {
+                bestDir = dir;
+                bestRubble = rubble;
+            }
+        }
+
+        if (bestDir != null) {
+            Actions.doBuildRobot(rt, bestDir);
+            return bestDir;
         } else {
             return null;
         }
@@ -366,7 +421,7 @@ public class Archon extends Robot {
 
     public static boolean checkTransform() throws GameActionException {
         // don't do this early
-        if (roundNum < 10) {
+        if (roundNum < 25) {
             return false;
         }
 
@@ -386,23 +441,9 @@ public class Archon extends Robot {
         }
 
         if (reportedEnemyCount > 0) {
-            int farthestArchonIndex = -1;
-            int farthestDist = N_INF;
-            // check if i am the farthest from danger
-            for (int ai = MAX_ARCHONS; --ai >= 0;) {
-                if (isAllyArchonLive[ai]) {
-                    MapLocation loc = allyArchonLocs[ai];
-                    int localMinDist = P_INF;
-                    for (int i = reportedEnemyCount; --i >= 0;) {
-                        int dist = loc.distanceSquaredTo(reportedEnemyLocs[i]);
-                        localMinDist = Math.min(dist, localMinDist);
-                    }
-                    if (localMinDist > farthestDist) {
-                        farthestDist = localMinDist;
-                        farthestArchonIndex = ai;
-                    }
-                }
-            }
+            int[] farthestData = getFarthestArchonToDanger();
+            int farthestArchonIndex = farthestData[0];
+            int farthestDist = farthestData[1];
 
             log("far ai " + farthestArchonIndex + " " + farthestDist);
             if (farthestArchonIndex == myArchonIndex) {
@@ -415,7 +456,7 @@ public class Archon extends Robot {
         return false;
     }
 
-    public static int getFarthestArchonToDanger() {
+    public static int[] getFarthestArchonToDanger() {
         int farthestArchonIndex = -1;
         int farthestDist = N_INF;
         // check if i am the farthest from danger
@@ -434,7 +475,7 @@ public class Archon extends Robot {
             }
         }
 
-        return farthestArchonIndex;
+        return new int[] {farthestArchonIndex, farthestDist};
     }
 
     public static int getClosestArchonToDanger() {

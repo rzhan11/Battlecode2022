@@ -1,9 +1,9 @@
-package archon_attack_bot;
+package explore2_bot;
 
 import battlecode.common.*;
 
-import static archon_attack_bot.Robot.*;
-import static archon_attack_bot.Debug.*;
+import static explore2_bot.Robot.*;
+import static explore2_bot.Debug.*;
 
 public class Actions {
 

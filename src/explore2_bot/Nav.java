@@ -1,14 +1,14 @@
-package archon_attack_bot;
+package explore2_bot;
 
 import battlecode.common.*;
 
 
-import static archon_attack_bot.Bug.*;
-import static archon_attack_bot.Constants.*;
-import static archon_attack_bot.Debug.*;
-import static archon_attack_bot.Map.*;
-import static archon_attack_bot.Robot.*;
-import static archon_attack_bot.Utils.*;
+import static explore2_bot.Bug.*;
+import static explore2_bot.Constants.*;
+import static explore2_bot.Debug.*;
+import static explore2_bot.Map.*;
+import static explore2_bot.Robot.*;
+import static explore2_bot.Utils.*;
 
 public class Nav {
 

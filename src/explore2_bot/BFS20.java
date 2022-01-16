@@ -1,11 +1,11 @@
-package archon_attack_bot;
+package explore2_bot;
 
 import battlecode.common.*;
 import static battlecode.common.Direction.*;
 
-import static archon_attack_bot.Debug.*;
-import static archon_attack_bot.Map.*;
-import static archon_attack_bot.Robot.*;
+import static explore2_bot.Debug.*;
+import static explore2_bot.Map.*;
+import static explore2_bot.Robot.*;
 
 public class BFS20 {
 
