@@ -220,7 +220,8 @@ public class Archon extends Robot {
 
         double numExploreMiners = Math.sqrt(unknownFrontierCount);
 
-        minerGoal = (int) (numMineMiners + numExploreMiners);
+//        minerGoal = (int) (numMineMiners + numExploreMiners);
+        minerGoal = 30;
         log("minerGoal " + minerGoal + " " + numMineMiners + " " + numExploreMiners);
         logline();
 
