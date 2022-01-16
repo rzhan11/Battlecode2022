@@ -2,8 +2,6 @@ package archon_attack_bot;
 
 import battlecode.common.*;
 
-import java.util.EnumSet;
-
 import static battlecode.common.RobotType.*;
 
 import static archon_attack_bot.Comms.*;
@@ -20,18 +18,12 @@ public class Archon extends Robot {
 
 
     public static int[] archonSpawnBit;
+    public static int numStartArchons;
+
 
     // things to do on turn 1 of existence
     public static void firstTurnSetup() throws GameActionException {
-//        String s = ZoneString.getZoneMapString();
-//        int i = s.charAt(0);
-//        int j = s.indexOf((char)0);
-//
-//        log("oct: " + ZONE_TOTAL_NUM + " " + s + " " + i + " " + j);
-//
-//
-//        printBuffer();
-//        rc.resign();
+        numStartArchons = rc.getArchonCount();
 
     }
 
@@ -42,6 +34,7 @@ public class Archon extends Robot {
     public static boolean madeContact = false;
 
     public static RobotType nextSpawnType = MINER;
+
 
     // code run each turn
     public static void turn() throws GameActionException {
@@ -194,13 +187,14 @@ public class Archon extends Robot {
         Standard build order
          */
 
+        double soldierGoal = numMiners;
+
         // mineLocs
         if (numMiners >= minerGoal) {
-            nextSpawnType = SOLDIER;
-            return;
+            soldierGoal = minerGoal + (numMiners - minerGoal) * 4;
         }
 
-        if (numSoldiers <= numMiners) {
+        if (numSoldiers <= soldierGoal) {
             nextSpawnType = SOLDIER;
             return;
         } else {
@@ -218,10 +212,10 @@ public class Archon extends Robot {
 
         double numMineMiners = Math.sqrt(mineCount) * 4;
 
-        double numExploreMiners = Math.sqrt(unknownFrontierCount);
+        double numExploreMiners = Math.sqrt(unknownCount);
 
-//        minerGoal = (int) (numMineMiners + numExploreMiners);
-        minerGoal = 30;
+        minerGoal = (int) Math.max(numExploreMiners, rc.getArchonCount() * 3);
+//        minerGoal = 30;
         log("minerGoal " + minerGoal + " " + numMineMiners + " " + numExploreMiners);
         logline();
 

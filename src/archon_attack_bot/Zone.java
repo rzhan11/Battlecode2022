@@ -161,7 +161,7 @@ public class Zone {
     public static boolean[][] isFrontierZone;
 
     public static void updateResourceZoneCount(int oldStatus, int newStatus, int zx, int zy) {
-        if (true) return;
+//        if (true) return;
         // track zone string
         ZoneString.setExplored(zx * ZONE_YNUM + zy, newStatus != 0);
 
@@ -173,6 +173,7 @@ public class Zone {
         switch (oldStatus) {
             case ZONE_UNKNOWN_FLAG:
                 unknownCount--;
+                /*
                 if (isFrontierZone[zx][zy]) {
                     unknownFrontierCount--;
                 }
@@ -220,7 +221,7 @@ public class Zone {
                 if (zy > 0 && zoneResourceStatus[zx][zy - 1] == ZONE_UNKNOWN_FLAG && !isFrontierZone[zx][zy - 1]) {
                     isFrontierZone[zx][zy - 1] = true;
                     unknownFrontierCount++;
-                }
+                }*/
                 break;
             case ZONE_EMPTY_FLAG:
                 break;
