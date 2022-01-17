@@ -34,6 +34,8 @@ public class Archon extends Robot {
 
     public static RobotType nextSpawnType = MINER;
 
+    public static MapLocation bestRepairLoc;
+
 
     // code run each turn
     public static void turn() throws GameActionException {
@@ -77,6 +79,10 @@ public class Archon extends Robot {
             return;
         }
 
+        // update best repair loc
+        updateBestRepairLoc();
+
+        // transform if needed
         boolean transformed = checkTransform();
         if (transformed) {
             Actions.doTransform();
@@ -141,28 +147,7 @@ public class Archon extends Robot {
             }
         }
 
-        // do heals if idle
-        RobotInfo[] actionableAllyRobots = rc.senseNearbyRobots(myActionRadius, us);
-        double bestScore = N_INF;
-        RobotInfo bestRobot = null;
-        for (int i = actionableAllyRobots.length; --i >= 0; ) {
-            RobotInfo ri = actionableAllyRobots[i];
-            if (ri.type.isBuilding()) {
-                continue;
-            }
-            if (ri.health < ri.type.getMaxHealth(ri.level)) {
-                double score = getRepairScore(ri);
-                if (score > bestScore) {
-                    bestScore = score;
-                    bestRobot = ri;
-                }
-            }
-        }
-
-        if (bestRobot != null) {
-            Actions.doRepair(bestRobot.location);
-            return;
-        }
+        tryRepair();
     }
 
     public static boolean checkTrySpawn() {
@@ -444,6 +429,11 @@ public class Archon extends Robot {
             return false;
         }
 
+        // don't move if ppl need healing
+        if (bestRepairLoc != null) {
+            return false;
+        }
+
         if (reportedEnemyCount > 0) {
             int[] farthestData = getFarthestArchonToDanger();
             int farthestArchonIndex = farthestData[0];
@@ -451,7 +441,7 @@ public class Archon extends Robot {
 
             log("far ai " + farthestArchonIndex + " " + farthestDist);
             if (farthestArchonIndex == myArchonIndex) {
-                if (farthestDist >= 100) { //
+                if (Math.sqrt(farthestDist) >= 10) { //
                     return true;
                 }
             }
@@ -502,5 +492,37 @@ public class Archon extends Robot {
         }
 
         return closestArchonIndex;
+    }
+
+    public static void tryRepair() throws GameActionException {
+        if (bestRepairLoc != null) {
+            Actions.doRepair(bestRepairLoc);
+            return;
+        }
+    }
+
+    public static void updateBestRepairLoc() {
+        bestRepairLoc = null;
+
+        // do heals if idle
+        RobotInfo[] actionableAllyRobots = rc.senseNearbyRobots(myActionRadius, us);
+        double bestScore = N_INF;
+        RobotInfo bestRobot = null;
+        for (int i = actionableAllyRobots.length; --i >= 0; ) {
+            RobotInfo ri = actionableAllyRobots[i];
+            if (ri.type.isBuilding()) {
+                continue;
+            }
+            if (ri.health < ri.type.getMaxHealth(ri.level)) {
+                double score = getRepairScore(ri);
+                if (score > bestScore) {
+                    bestScore = score;
+                    bestRobot = ri;
+                }
+            }
+        }
+        if (bestRobot != null) {
+            bestRepairLoc = bestRobot.location;
+        }
     }
 }
