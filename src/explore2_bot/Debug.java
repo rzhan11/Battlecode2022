@@ -133,18 +133,22 @@ public class Debug {
     */
     public static void logi() {
         buffer.append("\n");
+        printBuffer();
     }
 
     public static void logi(String str) {
         buffer.append("\n").append(str);
+        printBuffer();
     }
 
     public static void tlogi(String str) {
         buffer.append("\n- ").append(str);
+        printBuffer();
     }
 
     public static void ttlogi(String str) {
         buffer.append("\n-- ").append(str);
+        printBuffer();
     }
 
     public static void drawLine(MapLocation loc1, MapLocation loc2, int[] color) {

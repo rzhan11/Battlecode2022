@@ -27,7 +27,6 @@ public class Archon extends Robot {
 
     }
 
-    public static RobotType[] potentialSpawns = new RobotType[]{MINER, SOLDIER, BUILDER};
     public static int mySpawnCount = 0;
     public static int myArchonIndex = -1;
 
@@ -189,6 +188,11 @@ public class Archon extends Robot {
         int numMiners = getUnitCount(MINER);
         int numSoldiers = getUnitCount(SOLDIER);
         log("Standard: " + numSoldiers + " " + numMiners + " vs " + minerGoal);
+
+        if (rc.getTeamGoldAmount(us) >= SAGE.buildCostGold) {
+            nextSpawnType = SAGE;
+            return;
+        }
 
         // build soldier if in danger
         if (sensedEnemies.length > 0) {

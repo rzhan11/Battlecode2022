@@ -93,12 +93,45 @@ public class Miner extends Robot {
             return moveDir;
         }
 
+        // go to visible gold locs
+        MapLocation[] visibleGoldLocs = rc.senseNearbyLocationsWithGold(myVisionRadius);
+        if (visibleGoldLocs.length > 0) {
+            // go to gold loc
+            startBytecode("mine - checkGold");
+            log("num gold locs " + visibleGoldLocs.length);
+
+            MapLocation bestLoc = null;
+            int bestDist = P_INF;
+            for (int i = visibleGoldLocs.length; --i >= 0;) {
+                MapLocation loc = visibleGoldLocs[i];
+                int dist = here.distanceSquaredTo(loc);
+                if (dist < bestDist) {
+                    // only go to lead tiles in zone
+                    // only mine lead in same zone/old zones
+                    bestLoc = loc;
+                    bestDist = dist;
+                }
+            }
+            stopBytecode("mine - checkGold");
+
+            if (bestLoc != null) {
+                if (bestLoc.equals(here)) {
+                    rc.setIndicatorString("chilling at gold " + bestLoc);
+                    return null;
+                }
+                Direction moveDir = BFS.move(bestLoc);
+                rc.setIndicatorString("going to gold@" + bestLoc);
+                Debug.drawLine(here, bestLoc, RED);
+                return moveDir;
+            }
+        }
+
         // go to visible lead locs
         int minLead = isAggressive ? 1 : 2;
         MapLocation[] visibleLeadLocs = rc.senseNearbyLocationsWithLead(myVisionRadius, minLead);
         if (visibleLeadLocs.length > 0){
             startBytecode("mine - checkLead");
-            log("num lead " + visibleLeadLocs.length);
+            log("num lead locs " + visibleLeadLocs.length);
             if (visibleLeadLocs.length > 16) { // 68 / 2
                 visibleLeadLocs = rc.senseNearbyLocationsWithLead(8);
             }

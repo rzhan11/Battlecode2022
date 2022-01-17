@@ -793,8 +793,10 @@ public class Comms {
         startBytecode("readReportEnemySection");
         addToReportedEnemyLocs = addToList;
         if (addToReportedEnemyLocs) {
-            reportedEnemyLocs = new MapLocation[REPORT_ENEMY_SECTION_SIZE];
-            isReportedEnemyLocDanger = new boolean[REPORT_ENEMY_SECTION_SIZE];
+            if (reportedEnemyLocs == null) { // init
+                reportedEnemyLocs = new MapLocation[REPORT_ENEMY_SECTION_SIZE];
+                isReportedEnemyLocDanger = new boolean[REPORT_ENEMY_SECTION_SIZE];
+            }
             reportedEnemyCount = 0;
 
             readMessageSection(REPORT_ENEMY_SECTION_ID, REPORT_ENEMY_SECTION_OFFSET, REPORT_ENEMY_SECTION_SIZE, true);
