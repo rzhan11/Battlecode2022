@@ -1,12 +1,12 @@
-package explore2_bot;
+package sprint2_bot;
 
 import battlecode.common.*;
 
 import static battlecode.common.RobotType.*;
 
-import static explore2_bot.Debug.*;
-import static explore2_bot.Explore.*;
-import static explore2_bot.Zone.*;
+import static sprint2_bot.Debug.*;
+import static sprint2_bot.Explore.*;
+import static sprint2_bot.Zone.*;
 
 public class Soldier extends Robot {
     // constants

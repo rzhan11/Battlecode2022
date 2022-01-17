@@ -1,14 +1,14 @@
-package explore2_bot;
+package sprint2_bot;
 
 import battlecode.common.*;
 
 import static battlecode.common.RobotType.*;
 
-import static explore2_bot.Debug.*;
-import static explore2_bot.Explore.*;
-import static explore2_bot.Zone.*;
+import static sprint2_bot.Debug.*;
+import static sprint2_bot.Explore.*;
+import static sprint2_bot.Zone.*;
 
-public class Soldier extends Robot {
+public class Sage extends Robot {
     // constants
 
     // public static int[] SLANDERER_COSTS;
@@ -22,6 +22,7 @@ public class Soldier extends Robot {
 
         curEnemyDangers = new RobotInfo[curEnemyDangers_MAX_LEN];
 //        curEnemyNeutrals = new RobotInfo[curEnemyNeutrals_MAX_LEN];
+
     }
 
     // code run each turn
@@ -30,15 +31,6 @@ public class Soldier extends Robot {
 
         initEnemyTypeArrays();
 
-        // go home
-        updateHomeLoc();
-        log("home " + homeLoc + " " + rc.getHealth());
-        if (homeLoc != null) {
-            if (rc.isMovementReady()) {
-                Direction moveDir = moveHome();
-            }
-        }
-
         if (curEnemyDangerCount > 0) {
             if (rc.isActionReady() || rc.isMovementReady()) {
                 Utils.startBytecode("smartAttack");
@@ -46,13 +38,6 @@ public class Soldier extends Robot {
                 Utils.stopBytecode("smartAttack");
                 return;
             }
-        }
-
-        if (homeLoc != null) {
-            if (rc.isActionReady()) {
-                tryAttack();
-            }
-            return;
         }
 
         tryAttack();
@@ -157,25 +142,33 @@ public class Soldier extends Robot {
         for (int j = curEnemyDangerCount; --j >= 0; ) {
             RobotInfo ri = curEnemyDangers[j];
             MapLocation loc = ri.location;
-            if (destLoc.isWithinDistanceSquared(loc, myActionRadius)) { // if i can hit it
+            if (destLoc.isWithinDistanceSquared(loc, myActionRadius)) { // if i can hit it/they can see me
                 double theirTime = (10 + rc.senseRubble(loc)) / 10.0;
+
+                double thisHurt = 0.0;
+                // update hurt value
+                if (destLoc.isWithinDistanceSquared(loc, ri.type.actionRadiusSquared)) { // can hit us
+                    thisHurt = SOLDIER.damage / theirTime;
+                } else if (destLoc.isWithinDistanceSquared(loc, ri.type.visionRadiusSquared)) { // can see us
+                    thisHurt = 0.25 * SOLDIER.damage / theirTime;
+                }
+                ourHurt += thisHurt;
+
                 // score = how much damage being taken away
                 // score = d^2 / (health * theirTime)
                 // make it 1.01 to favor aggression
-                double score = 1.01 * (myDamage * Math.min(myDamage, ri.health) / ri.health) * (1 / theirTime);
+                double killBonus = 0.0; // bonus goes from 0.25-0.5 of DPS
+                if (myDamage >= ri.health) {
+                    killBonus = 0.25 + 0.25 * ri.health / myDamage;
+                }
+                double score = 1.01 * myDamage * (Math.min(myDamage, ri.health) / ri.health + killBonus) * (1 / theirTime);
+                if (myDamage >= ri.health) { // we no longer take damage from them
+                    score += thisHurt;
+                }
                 if (score > bestTheirDPSDecrease) {
                     smartAttack_LocalBestEnemy = ri;
                     bestTheirDPSDecrease = score;
                 }
-
-                // update hurt value
-                ourHurt += myDamage / theirTime;
-            } else if (destLoc.isWithinDistanceSquared(loc, myVisionRadius)) {
-                // reduced hurt value for this
-                double theirTime = (10 + rc.senseRubble(loc)) / 10.0;
-
-                // update (reduced) hurt value
-                ourHurt += 0.25 * myDamage / theirTime;
             }
         }
         // divide by local time
@@ -195,7 +188,7 @@ public class Soldier extends Robot {
         }
 
         // calculate ourDPS from ourHealth
-        double ourDPS = (ourHealth / myHealth) * myDamage / localDelay;
+        double ourDPS = (ourHealth / myHealth) * myDamage / (localDelay * (1.0 * SAGE.actionCooldown / SOLDIER.actionCooldown));
 
         // if it is the center dir, we can move after attacking, so we can use the best dps
         if (ourDPS > smartAttack_BestOurDPS) {
@@ -222,7 +215,6 @@ public class Soldier extends Robot {
 
         return localBestScore;
     }
-
     public static RobotInfo[] curEnemyDangers;
     public static int curEnemyDangerCount;
     final public static int curEnemyDangers_MAX_LEN = 20;
@@ -273,13 +265,11 @@ public class Soldier extends Robot {
 //        }
     }
 
-
     public static Direction moveLogic() throws GameActionException {
         // skip turn, if cooldown is too high
         if (!rc.isMovementReady()) {
             return null;
         }
-
 
         updateTargetEnemyLoc();
         log("target " + targetEnemyLoc + " " + targetEnemyLocDanger);
@@ -288,12 +278,18 @@ public class Soldier extends Robot {
         // should automatically target the closest one
         if (sensedEnemies.length > 0) {
             Direction moveDir;
+//            Direction moveDir = chaseSoldier();
+//            if (moveDir != null) {
+//                return moveDir;
+//            }
 
             // if not currently in danger, but has dangerous target, go to dangerous target
+//            if (closestEnemySoldier == null) {
 //                if (targetEnemyLocDanger) {
 //                    moveDir = goToTargetEnemy();
 //                    return moveDir;
 //                }
+//            }
 
             // chase current enemy
             moveDir = chaseNeutral();
@@ -306,97 +302,9 @@ public class Soldier extends Robot {
             return moveDir;
         }
 
-
         Direction moveDir = Explore.exploreSimple();
         rc.setIndicatorString("exploring " + Explore.exploreLoc);
         return moveDir;
-    }
-
-    final public static int STAY_HOME_LEAD_MAX = 300;
-    final public static int HOME_LOC_UPDATE_FREQ = 10;
-    public static MapLocation homeLoc;
-    public static int homeLocRound = 0;
-
-    /*
-    If myHealth > 45, reset homeLoc
-    If myHealth < 15, go home
-    Don't go home if lots of lead
-     */
-    public static void updateHomeLoc() throws GameActionException {
-        // if has lots of health
-        if (rc.getHealth() >= 49 || rc.getTeamLeadAmount(us) > STAY_HOME_LEAD_MAX) {
-            homeLoc = null;
-            return;
-        }
-
-        // if needs healing, try to find a homeLoc
-        if (homeLoc == null) {
-            if (rc.getHealth() <= 15 && rc.getTeamLeadAmount(us) < STAY_HOME_LEAD_MAX) {
-                homeLoc = getClosestAllyArchon(here, true);
-                homeLocRound = roundNum;
-                return;
-            }
-        }
-
-        // if old data, update the homeLoc
-        if (homeLoc != null && roundNum - homeLocRound >= HOME_LOC_UPDATE_FREQ) {
-            log("updating");
-            homeLoc = getClosestAllyArchon(here, true);
-            tlog("" + homeLoc);
-            homeLocRound = roundNum;
-            return;
-        }
-    }
-
-    public static Direction moveHome() throws GameActionException {
-
-        // can be healed
-        if (here.isWithinDistanceSquared(homeLoc, ARCHON.actionRadiusSquared)) {
-            // stay still
-            // if near home and has a lot of people to be healed
-            /*if (sensedAllySoldierCount >= 8 && myHealth <= 20 && sensedEnemySoldierCount == 0) {
-                Nav.moveSuicideTile(true);
-//                return null;
-                Actions.doDisintegrate();
-                return null;
-            }*/
-            rc.setIndicatorString("at home");
-            if (sensedEnemySoldierCount == 0) {
-                Direction moveDir = Nav.moveBetterTile(homeLoc, ARCHON.actionRadiusSquared);
-                return moveDir;
-            }
-            // if enemy soldier count > 0, dont move and go to better tile
-            return null;
-        } else {
-            rc.setIndicatorString("going home");
-            if (sensedEnemySoldierCount == 0) {
-                Direction moveDir = BFS.move(homeLoc);
-                return moveDir;
-            }
-            return null;
-        }
-    }
-
-    public static Direction runAwayFromEnemy() throws GameActionException {
-        // find closest danger soldiers
-        RobotInfo[] closeEnemies = sensedEnemies;
-        MapLocation closestEnemySoldier = null;
-        int bestDist = P_INF;
-        for (int i = closeEnemies.length; --i >= 0; ) {
-            RobotInfo ri = closeEnemies[i];
-            if (ri.type == SOLDIER) {
-                int dist = here.distanceSquaredTo(ri.location);
-                if (dist < bestDist) {
-                    bestDist = dist;
-                    closestEnemySoldier = ri.location;
-                }
-            }
-        }
-
-        if (closestEnemySoldier != null) {
-            return Nav.fuzzyAwaySimple(closestEnemySoldier);
-        }
-        return null;
     }
 
 
