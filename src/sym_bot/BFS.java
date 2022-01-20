@@ -21,7 +21,7 @@ public class BFS {
         MapTracker.reset();
     }
 
-    public static void update(MapLocation target){
+    public static void update(MapLocation target) {
         if (currentTarget == null || target.distanceSquaredTo(currentTarget) > 0){
             reset();
         } else --turnsGreedy;

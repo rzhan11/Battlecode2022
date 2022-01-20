@@ -29,6 +29,11 @@ public class Archon extends Robot {
         /*
         Spawn miners if we can
          */
+        for (int i = Robot.DIRS.length; --i >= 0; ) {
+            if (rc.canBuildRobot(MINER,Robot.DIRS[i])) {
+                Actions.doBuildRobot(MINER,Robot.DIRS[i]);
+            }
+        }
     }
 
     public static boolean isPrimaryArchon() {

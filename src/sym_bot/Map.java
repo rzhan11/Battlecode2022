@@ -8,6 +8,7 @@ import static sym_bot.Robot.*;
 public class Map {
     public static int XMAX;
     public static int YMAX;
+    public static MapLocation mapCenter;
 
     public static boolean notHSymmetry = false;
     public static boolean notVSymmetry = false;
@@ -15,33 +16,94 @@ public class Map {
 
     public static Symmetry theSymmetry = null;
 
+//    public static boolean xTrueCenter = false;
+//    public static boolean yTrueCenter = false;
+
     public static void initMap() {
-        XMAX = rc.getMapWidth() - 1;
-        YMAX = rc.getMapHeight() - 1;
+        XMAX = mapWidth - 1;
+        YMAX = mapHeight - 1;
+
+        /*
+        even width = 4:
+        0 1 2 3
+        * * * *
+        center =
+
+        odd width = 5:
+        0 1 2 3 4
+        * * * * *
+        center = xmax/2
+         */
+
+        // for dimensions odd x odd, true center
+        // for even, it is closer to origin
+//        if (XMAX % 2 == 1) {
+//            xTrueCenter = true;
+//        }
+//        if (YMAX % 2 == 1) {
+//            xTrueCenter = true;
+//        }
+
+        int xCenter = XMAX/2;
+        int yCenter = YMAX/2;
+        mapCenter = new MapLocation(xCenter, yCenter);
     }
 
     // todo: try sensing symmetric locations to see if they have the same rubble
     public static void updateSymmetryByRubble() throws GameActionException {
+        if (here.isWithinDistanceSquared(mapCenter, 1)) {
 
+        }
     }
 
     // todo:
     /*
     Helper method
     Assumes that loc1/loc2 would be symmetric locations
+    Assumes that loc1/loc2 are both in vision radius
     Checks if they contain the same rubble
     Returns true if it satisfies symmetry (same rubble)
     Returns false if it breaks symmetry (diff rubble)
     */
     public static boolean checkSymmetry(MapLocation loc1, MapLocation loc2) throws GameActionException {
-        return false;
+        return rc.senseRubble(loc1)==rc.senseRubble(loc2);
     }
 
     // todo: a useful helper method
     // returns the closest unexplored symmetry enemy hq that is unexplored
     public static MapLocation getClosestUnknownSymHQ() throws GameActionException {
-        return null;
+        MapLocation hSymLoc = Map.getSymmetricLocation(here, Symmetry.H);
+        MapLocation vSymLoc = Map.getSymmetricLocation(here, Symmetry.V);
+        MapLocation rSymLoc = Map.getSymmetricLocation(here, Symmetry.R);
+
+        int hDist = here.distanceSquaredTo(hSymLoc);
+        int vDist = here.distanceSquaredTo(vSymLoc);
+        int rDist = here.distanceSquaredTo(rSymLoc);
+
+        if (hDist <= vDist && hDist <= rDist) {
+            return hSymLoc;
+        }
+        else if (vDist <= hDist && vDist <= rDist) {
+            return vSymLoc;
+        }
+        else {
+            return rSymLoc;
+        }
     }
+
+    public static MapLocation[] getAllSymHQs() throws GameActionException {
+        MapLocation hSymLoc = Map.getSymmetricLocation(here, Symmetry.H);
+        MapLocation vSymLoc = Map.getSymmetricLocation(here, Symmetry.V);
+        MapLocation rSymLoc = Map.getSymmetricLocation(here, Symmetry.R);
+
+        MapLocation[] allSymHQs = {hSymLoc,vSymLoc,rSymLoc};
+
+        return allSymHQs;
+    }
+
+//    public static MapLocation getClosestArchonLoc() throws GameActionException {
+//
+//    }
 
     // ref: prob useful
     public static MapLocation getSymmetricLocation(MapLocation loc, Symmetry sym) {

@@ -14,11 +14,19 @@ public class Explore {
     }
 
     /*
-    Have soldiers go to symmetric locations to check for enemy archons
+    Have miners go to symmetric locations to check for enemy archons
      */
     public static Direction explore() {
+
         return null;
     }
+
+    /*
+    random
+    closest
+
+
+     */
 
 
 

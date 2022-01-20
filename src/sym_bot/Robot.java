@@ -1,6 +1,7 @@
 package sym_bot;
 
 import battlecode.common.*;
+import sprint_bot.HardCode;
 
 import static battlecode.common.RobotType.*;
 
@@ -17,7 +18,7 @@ public abstract class Robot extends Constants {
     final public static Direction[] ALL_DIRS = {Direction.NORTH, Direction.NORTHEAST, Direction.EAST, Direction.SOUTHEAST, Direction.SOUTH, Direction.SOUTHWEST, Direction.WEST, Direction.NORTHWEST, Direction.CENTER}; // includes center
     final public static Direction[] CARD_DIRS = {Direction.NORTH, Direction.EAST, Direction.SOUTH, Direction.WEST}; // four cardinal directions
     final public static Direction[] DIAG_DIRS = {Direction.NORTHEAST, Direction.SOUTHEAST, Direction.SOUTHWEST, Direction.NORTHWEST}; // four diagonals
-
+    final public static Symmetry[] SYM_TYPES = {Symmetry.H, Symmetry.V, Symmetry.R}; // three types of symmetry
 
     /*
     Variables that will never change (once set)
@@ -74,6 +75,8 @@ public abstract class Robot extends Constants {
 
         // printBuffer at end
         Debug.printBuffer();
+
+        HardCode.initHardCode();
     }
 
     /*
@@ -124,6 +127,7 @@ public abstract class Robot extends Constants {
             }
         }
 
+        Map.updateSymmetryByRubble();
         // todo: make any necessary comm updates
 
 
