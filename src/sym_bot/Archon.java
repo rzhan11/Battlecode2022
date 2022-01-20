@@ -2,7 +2,6 @@ package sym_bot;
 
 import battlecode.common.*;
 
-import java.util.Arrays;
 
 import static battlecode.common.RobotType.*;
 

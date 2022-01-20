@@ -106,6 +106,7 @@ public strictfp class RobotPlayer {
      * This code is wrapped inside the infinite loop in run(), so it is called once per turn.
      */
     static void runArchon(RobotController rc) throws GameActionException {
+        System.out.println("hi " + rc.getID());
         // Pick a direction to build in.
         Direction dir = directions[rng.nextInt(directions.length)];
         if (rng.nextBoolean()) {

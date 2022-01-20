@@ -181,9 +181,9 @@ public class Nav {
     }
 
     public static MapLocation avoidCorner(MapLocation loc, int minDist) {
-        MapLocation cornerBL = new MapLocation(XMIN, YMIN);
-        MapLocation cornerBR = new MapLocation(XMAX, YMIN);
-        MapLocation cornerTL = new MapLocation(XMIN, YMAX);
+        MapLocation cornerBL = new MapLocation(0, 0);
+        MapLocation cornerBR = new MapLocation(XMAX, 0);
+        MapLocation cornerTL = new MapLocation(0, YMAX);
         MapLocation cornerTR = new MapLocation(XMAX, YMAX);
         if (loc.isWithinDistanceSquared(cornerBL, minDist)) {
             return cornerBL;

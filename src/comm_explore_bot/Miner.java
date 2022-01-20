@@ -1,7 +1,9 @@
 package comm_explore_bot;
 
 import battlecode.common.*;
+import org.hamcrest.generator.qdox.model.annotation.AnnotationGreaterEquals;
 
+import static comm_explore_bot.Comms.*;
 import static comm_explore_bot.Debug.*;
 import static comm_explore_bot.Utils.*;
 import static comm_explore_bot.Zone.*;
@@ -10,45 +12,17 @@ import static comm_explore_bot.Zone.*;
 public class Miner extends Robot {
 //    public static boolean useSimpleExplore;
     final public static int ZONE_DANGER_WAIT = 10;
+    public static boolean willHelpMine;
 
     public static void firstTurnSetup() throws GameActionException {
         // first turn comms
-//        useSimpleExplore = random() < 0;
-
-
-//        if (roundNum > 50) {
-//            endTurn();
-//            updateTurnInfo();
-//        }
+        willHelpMine = random() < 1; // most ppl will help
     }
 
     // code run each turn
     public static void turn() throws GameActionException {
-        log(here + " " + targetZoneLoc + " " + zoneResourceStatus[4][3]);
-        if (myID == 15259) {
-            // draw resource zone
-            {
-                MapLocation loc = new MapLocation(2 * ZONE_SIZE, 1 + 5 * ZONE_SIZE);
-                int[] color = PINK;
-                switch (zoneResourceStatus[2][5]) {
-                    case ZONE_UNKNOWN_FLAG:
-                        color = BLACK;
-                        break;
-                    case ZONE_EMPTY_FLAG:
-                        color = RED;
-                        break;
-                    case ZONE_MINE_FLAG:
-                        color = GREEN;
-                        break;
-
-                    default:
-//                        logi("WARNING: 'displayZoneStatus' Unknown zone status! " + zoneResourceStatus[zx][zy]);
-                }
-                Debug.drawDot(loc, color);
-
-            }
-        }
-
+        // check aggression
+        updateAggression();
 
         // put role-specific updates here
 //        startBytecode("updateMomentum");
@@ -93,6 +67,8 @@ public class Miner extends Robot {
         }
     }
 
+    public static MapLocation mineHelpLoc;
+
     public static Direction moveLogic() throws GameActionException {
         // look for better spot to move
 
@@ -114,8 +90,9 @@ public class Miner extends Robot {
             return moveDir;
         }
 
-        // go to good lead locs
-        MapLocation[] visibleLeadLocs = rc.senseNearbyLocationsWithLead(myVisionRadius, 2);
+        // go to visible lead locs
+        int minLead = isAggressive ? 1 : 2;
+        MapLocation[] visibleLeadLocs = rc.senseNearbyLocationsWithLead(myVisionRadius, minLead);
         if (visibleLeadLocs.length > 0){
             startBytecode("mine - checkLead");
             log("num lead " + visibleLeadLocs.length);
@@ -145,6 +122,35 @@ public class Miner extends Robot {
             }
         }
 
+        // go towards mineHelpLoc
+        if (willHelpMine) {
+            // reset if close enough
+            if (mineHelpLoc != null) {
+                checkResetMineHelpLoc();
+            }
+
+            // choose new one if needed
+            while (mineHelpLoc == null && mineHelpCacheLen > 0) {
+                int index = (mineHelpCacheIndex + randInt(mineHelpCacheLen)) % MINE_HELP_CACHE_SIZE;
+                mineHelpLoc = mineHelpCacheLoc[index];
+                // swap with front
+                mineHelpCacheLoc[index] = mineHelpCacheLoc[mineHelpCacheIndex];
+                // decrease queue size
+                mineHelpCacheIndex = (mineHelpCacheIndex + 1) % MINE_HELP_CACHE_SIZE;
+                mineHelpCacheLen--;
+
+                checkResetMineHelpLoc();
+            }
+
+            if (mineHelpLoc != null) {
+                // go to mineHelp
+                Direction moveDir = BFS.move(mineHelpLoc);
+                rc.setIndicatorString("going to mine help loc " + mineHelpLoc);
+                drawLine(here, mineHelpLoc, GRAY);
+                return moveDir;
+            }
+        }
+
         // go towards unknown zones
         {
             // update target zones
@@ -168,6 +174,38 @@ public class Miner extends Robot {
 //        } else { // use momentum
 //        Direction moveDir = Explore.exploreMomentum();
 //        return moveDir;
+    }
+
+    public static void checkResetMineHelpLoc() {
+        int dist = here.distanceSquaredTo(mineHelpLoc);
+        if (dist < 8 || MINE_HELP_RANGE < dist) {
+            mineHelpLoc = null;
+        }
+    }
+
+    final public static int AGGRESSIVE_TIME = 5;
+    public static int lastAggressiveRound = -(AGGRESSIVE_TIME + 10);
+
+    public static void updateAggression() {
+        updateAggressionRound();
+        isAggressive = (roundNum - lastAggressiveRound) < AGGRESSIVE_TIME; // stay aggressive for 10 rounds
+    }
+
+    public static void updateAggressionRound() {
+        MapLocation closestAllyLoc = getClosestAllyArchon(here);
+        if (Math.sqrt(here.distanceSquaredTo(closestAllyLoc)) > Math.hypot(mapWidth, mapHeight) / 2) {
+            lastAggressiveRound = roundNum;
+            return;
+        }
+
+        MapLocation closestEnemyLoc = getClosestEnemyArchonSymLoc(here);
+        if (closestEnemyLoc != null) {
+            double allyDist = Math.sqrt(here.distanceSquaredTo(closestAllyLoc));
+            double enemyDist = Math.sqrt(here.distanceSquaredTo(closestEnemyLoc));
+            if (enemyDist < allyDist - 10) {
+                lastAggressiveRound = roundNum;
+            }
+        }
     }
 
     public static MapLocation closestDangerLoc;
@@ -296,6 +334,7 @@ public class Miner extends Robot {
 
 
 
+    public static boolean isAggressive;
     public static MapLocation wouldMineLoc;
 
     public static void tryMine() throws GameActionException {
@@ -319,12 +358,23 @@ public class Miner extends Robot {
         MapLocation[] adjLeadLocs = rc.senseNearbyLocationsWithLead(2);
         for (int i = adjLeadLocs.length; --i >= 0;) {
             MapLocation loc = adjLeadLocs[i];
-            while (rc.senseLead(loc) > 1) {
-                if (rc.isActionReady()) {
-                    Actions.doMineLead(loc);
-                } else {
-                    wouldMineLoc = loc;
-                    return;
+            if (isAggressive) {
+                while (rc.senseLead(loc) > 0) {
+                    if (rc.isActionReady()) {
+                        Actions.doMineLead(loc);
+                    } else {
+                        wouldMineLoc = loc;
+                        return;
+                    }
+                }
+            } else {
+                while (rc.senseLead(loc) > 1) {
+                    if (rc.isActionReady()) {
+                        Actions.doMineLead(loc);
+                    } else {
+                        wouldMineLoc = loc;
+                        return;
+                    }
                 }
             }
         }

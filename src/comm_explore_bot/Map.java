@@ -6,8 +6,6 @@ import static comm_explore_bot.Debug.*;
 import static comm_explore_bot.Robot.*;
 
 public class Map {
-    public static int XMIN = 0;
-    public static int YMIN = 0;
     public static int XMAX;
     public static int YMAX;
 
@@ -522,6 +520,19 @@ public class Map {
     }
 
     */
+
+    public static MapLocation getSymLoc(MapLocation loc, Symmetry sym) {
+        switch(sym) {
+            case H:
+                return new MapLocation(XMAX - loc.x, loc.y);
+            case V:
+                return new MapLocation(loc.x, YMAX - loc.y);
+            case R:
+                return new MapLocation(XMAX - loc.x, YMAX - loc.y);
+            default:
+                return null;
+        }
+    }
 
     public static int dir2int(Direction dir) {
         switch (dir) {

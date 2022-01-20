@@ -19,7 +19,7 @@ public class Explore {
     public static double momentumY;
 
     public static void init() {
-        exploreLoc = getRandomLoc();
+        chooseNewExploreLoc();
         momentumX = random();
         momentumY = random();
     }
@@ -171,9 +171,8 @@ public class Explore {
     }
 
     public static Direction exploreSimple() throws GameActionException {
-        while (here.isWithinDistanceSquared(exploreLoc, EXPLORE_DISTANCE_REQ)) {
-            exploreLoc = getRandomLoc();
-            attemptsSinceProgress = 0;
+        if (here.isWithinDistanceSquared(exploreLoc, EXPLORE_DISTANCE_REQ)) {
+            chooseNewExploreLoc();
         }
 
         drawLine(here, exploreLoc, WHITE);
@@ -186,55 +185,22 @@ public class Explore {
 
         attemptsSinceProgress++;
         if (attemptsSinceProgress > EXPLORE_PATIENCE) {
-            exploreLoc = getRandomLoc();
-            attemptsSinceProgress = 0;
+            chooseNewExploreLoc();
             return exploreSimple();
         }
 
         return null;
     }
 
-    public static void explore() throws GameActionException {
-        if (here.isWithinDistanceSquared(exploreLoc, EXPLORE_DISTANCE_REQ)) {
-            chooseNewExploreLoc(0);
-        }
-
-        drawLine(here, exploreLoc, WHITE);
-
-        Direction moveDir = Nav.fuzzyTo(exploreLoc);
-        if (moveDir != null) {
+    public static void chooseNewExploreLoc() {
+        do {
+            MapLocation loc = getRandomLoc();
+            while (loc.equals(here)) {
+                loc = getRandomLoc();
+            }
+            exploreLoc = Map.getFarthestLoc(here, loc.x - here.x, loc.y - here.y);
             attemptsSinceProgress = 0;
-            return;
-        }
-
-        attemptsSinceProgress++;
-        if (attemptsSinceProgress > EXPLORE_PATIENCE) {
-            chooseNewExploreLoc(0);
-            explore();
-        }
+        } while (here.isWithinDistanceSquared(exploreLoc, EXPLORE_DISTANCE_REQ));
     }
-
-    public static void chooseNewExploreLoc(int retryCount) {
-        if (retryCount >= 4) {
-            return;
-        }
-
-        // choose new location
-        exploreLoc = getRandomLoc();
-        attemptsSinceProgress = 0;
-
-        // make sure to choose a location that is somewhat far away
-        while (here.isWithinDistanceSquared(exploreLoc, EXPLORE_DISTANCE_REQ)) {
-            exploreLoc = getRandomLoc();
-        }
-
-        // if already known zone, find a new one
-        int[] zone = loc2Zone(exploreLoc);
-        if (zoneResourceStatus[zone[0]][zone[1]] != ZONE_UNKNOWN_FLAG) {
-            chooseNewExploreLoc(retryCount + 1);
-        }
-    }
-
-
 
 }

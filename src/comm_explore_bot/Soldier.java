@@ -46,6 +46,9 @@ public class Soldier extends Robot {
         }
 
         if (homeLoc != null) {
+            if (rc.isActionReady()) {
+                tryAttack();
+            }
             return;
         }
 
@@ -274,7 +277,7 @@ public class Soldier extends Robot {
         }
 
         // pack exploring
-//        {
+//        if (Comms.commonExploreLoc != null) {
 //            MapLocation targetLoc = Comms.commonExploreLoc;
 //            if (here.distanceSquaredTo(targetLoc) < 25) {
 //                drawLine(here, targetLoc, BLACK);
@@ -290,8 +293,8 @@ public class Soldier extends Robot {
 //            }
 //        }
 
-        Explore.updateMomentum();
-        Direction moveDir = Explore.exploreMomentum();
+//        Explore.updateMomentum();
+        Direction moveDir = Explore.exploreSimple();
         rc.setIndicatorString("exploring " + Explore.exploreLoc);
         return moveDir;
     }

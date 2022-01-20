@@ -151,7 +151,7 @@ public class Watchtower extends Robot {
             }
         }
 
-        explore();
+        exploreSimple();
         rc.setIndicatorString("exploring " + exploreLoc);
     }
 

@@ -176,7 +176,7 @@ public class Comms {
     final public static int BROADCAST_RESOURCE_SECTION_SIZE = 4;
 
     final public static int REPORT_ENEMY_SECTION_ID = 6;
-    final public static int REPORT_ENEMY_SECTION_OFFSET = BROADCAST_RESOURCE_SECTION_ID + BROADCAST_RESOURCE_SECTION_OFFSET;
+    final public static int REPORT_ENEMY_SECTION_OFFSET = BROADCAST_RESOURCE_SECTION_OFFSET + BROADCAST_RESOURCE_SECTION_SIZE;
     final public static int REPORT_ENEMY_SECTION_SIZE = 8;
 
     final public static int COMMON_EXPLORE_SECTION_ID = 7;
@@ -186,6 +186,10 @@ public class Comms {
     final public static int ALLY_UNIT_COUNT_SECTION_ID = 8;
     final public static int ALLY_UNIT_COUNT_SECTION_OFFSET = COMMON_EXPLORE_SECTION_OFFSET + COMMON_EXPLORE_SECTION_SIZE;
     final public static int ALLY_UNIT_COUNT_SECTION_SIZE = 5;
+
+    final public static int MINE_HELP_SECTION_ID = 9;
+    final public static int MINE_HELP_SECTION_OFFSET = ALLY_UNIT_COUNT_SECTION_OFFSET + ALLY_UNIT_COUNT_SECTION_SIZE;
+    final public static int MINE_HELP_SECTION_SIZE = 5;
 
     /*
     Write a message to an empty cell in a given section
@@ -290,6 +294,9 @@ public class Comms {
                 case ALLY_UNIT_COUNT_SECTION_ID:
                     readAllyUnitCount(msgInfo, msgIndex);
                     break;
+                case MINE_HELP_SECTION_ID:
+                    readMineHelp(msgInfo);
+                    break;
 
 
                 default:
@@ -355,6 +362,7 @@ public class Comms {
                 {REPORT_RESOURCE_SECTION_OFFSET, REPORT_RESOURCE_SECTION_SIZE},
                 {REPORT_ENEMY_SECTION_OFFSET, REPORT_ENEMY_SECTION_SIZE},
                 {ALLY_UNIT_COUNT_SECTION_OFFSET, ALLY_UNIT_COUNT_SECTION_SIZE},
+                {MINE_HELP_SECTION_OFFSET, MINE_HELP_SECTION_SIZE},
         };
 
 //        int a = Clock.getBytecodesLeft();
@@ -808,5 +816,79 @@ public class Comms {
 //                logi("WARNING: unknown unit");
         }
         return -1;
+    }
+
+    final public static int MINE_HELP_UPDATE_FREQ = 5;
+    public static int lastWriteMineHelpRound = -(MINE_HELP_UPDATE_FREQ + 10);
+
+    public static void writeMineHelp(MapLocation loc) throws GameActionException {
+        if (roundNum - lastWriteMineHelpRound < MINE_HELP_UPDATE_FREQ) {
+            log("[WRITE-SKIP]");
+            return;
+        }
+
+        lastWriteMineHelpRound = roundNum;
+
+        int[] zone = loc2Zone(loc);
+        int msg = zone2bits(zone[0], zone[1]);
+        log("Writing 'Mine Help' " + loc + " " + zone[0] + " " + zone[1]);
+
+        writeToEmptyCell(msg, MINE_HELP_SECTION_OFFSET, MINE_HELP_SECTION_SIZE);
+    }
+
+    final public static int MINE_HELP_DURATION = 10;
+    final public static int MINE_HELP_CACHE_SIZE = 10;
+    final public static int MINE_HELP_RANGE = 225;
+
+    public static MapLocation[] mineHelpCacheLoc = new MapLocation[MINE_HELP_CACHE_SIZE];
+    public static int mineHelpCacheIndex;
+    public static int mineHelpCacheLen;
+
+    public static void readMineHelp(int msgInfo) {
+        int[] zone = bits2zone(msgInfo);
+        MapLocation loc = zone2Loc(zone[0], zone[1]);
+        log("Reading 'Mine Help' " + loc + " " + zone[0] + " " + zone[1]);
+
+        // check if exists already
+        boolean exists = false;
+        {
+            int index = mineHelpCacheIndex;
+            for (int i = mineHelpCacheLen; --i >= 0;) {
+                if (loc.equals(mineHelpCacheLoc[i])) {
+                    exists = true;
+                    break;
+                }
+
+                index++;
+                if (index == MINE_HELP_CACHE_SIZE) {
+                    index = 0;
+                }
+            }
+        }
+
+        // add to queue if close enough
+        if (!exists && here.isWithinDistanceSquared(loc, MINE_HELP_RANGE)) {
+            if (mineHelpCacheLen < MINE_HELP_CACHE_SIZE) {
+                // if closer than front, swap with front
+                if (mineHelpCacheLen > 0) {
+                    int oldDist = here.distanceSquaredTo(mineHelpCacheLoc[mineHelpCacheIndex]);
+                    int newDist = here.distanceSquaredTo(loc);
+                    if (Math.sqrt(newDist) < Math.sqrt(oldDist) - 5) { // closer by 5
+                        MapLocation temp = loc;
+                        loc = mineHelpCacheLoc[mineHelpCacheIndex];
+                        mineHelpCacheLoc[mineHelpCacheIndex] = temp;
+                    }
+                }
+
+                mineHelpCacheLoc[(mineHelpCacheIndex + mineHelpCacheLen) % MINE_HELP_CACHE_SIZE] = loc;
+                mineHelpCacheLen++;
+            }
+        }
+    }
+
+    public static void readMineHelpSection() throws GameActionException {
+        startBytecode("readMineHelpSection");
+        readMessageSection(MINE_HELP_SECTION_ID, MINE_HELP_SECTION_OFFSET, MINE_HELP_SECTION_SIZE, false);
+        stopBytecode("readMineHelpSection");
     }
 }

@@ -46,6 +46,7 @@ public abstract class Robot extends Constants {
 
     public static void init(RobotController theRC) throws GameActionException {
         rc = theRC;
+        here = rc.getLocation();
 
         myID = rc.getID();
         myType = rc.getType();
@@ -152,6 +153,13 @@ public abstract class Robot extends Constants {
         // report unit counts
         Comms.writeAllyUnitCount(myType);
 
+        if (age >= 1) {
+            if (enemyArchonSymLocs == null) {
+                initEnemyArchonSymLocs();
+            }
+            updateEnemyArchonSymLocs();
+        }
+
 
         // update last zone
         zoneVisitLastRound[myZoneX][myZoneY] = roundNum;
@@ -198,6 +206,10 @@ public abstract class Robot extends Constants {
 //        }
 
         Comms.readAllyArchonSection();
+
+        if (myType == MINER) {
+            Comms.readMineHelpSection();
+        }
 
         // skip these comms for non-archons on their spawn round
         if (myType == ARCHON || age > 0) {
@@ -302,31 +314,33 @@ public abstract class Robot extends Constants {
         MapLocation[] visibleLeadLocs = rc.senseNearbyLocationsWithLead(myVisionRadius);
 
         // limit number of searched locs if low on bytecode
-        int maxSearchCount;
-        switch (myType.bytecodeLimit) {
-            case 5000:
-                maxSearchCount = 0;
-                break;
-            case 7500:
-                maxSearchCount = 5;
-                break;
-            case 10000:
-                maxSearchCount = 17;
-                break;
-            case 20000:
-                maxSearchCount = 33;
-                break;
-            default:
-                maxSearchCount = 0;
-                logi("WARNING: 'updateResourceZoneStatusSpeculative' Unexpected bytecode limit " + myType.bytecodeLimit);
-
-        }
+        int maxSearchCount = 100;
+//        switch (myType.bytecodeLimit) {
+//            case 5000:
+//                maxSearchCount = 0;
+//                break;
+//            case 7500:
+//                maxSearchCount = 5;
+//                break;
+//            case 10000:
+//                maxSearchCount = 17;
+//                break;
+//            case 20000:
+//                maxSearchCount = 33;
+//                break;
+//            default:
+//                maxSearchCount = 0;
+//                logi("WARNING: 'updateResourceZoneStatusSpeculative' Unexpected bytecode limit " + myType.bytecodeLimit);
+//
+//        }
 
         int numSearched = Math.min(maxSearchCount, visibleLeadLocs.length);
 
         // search through lead locs
+        int totalLead = 0;
         for (int i = numSearched; --i >= 0; ) {
             MapLocation loc = visibleLeadLocs[i];
+            totalLead += rc.senseLead(loc);
             int zx = loc.x / ZONE_SIZE;
             int zy = loc.y / ZONE_SIZE;
             if (zoneResourceStatus[zx][zy] != ZONE_MINE_FLAG) {
@@ -338,20 +352,25 @@ public abstract class Robot extends Constants {
             }
         }
 
-        // search last index as well (first/last indices are more likely to be unique zones)
-        if (visibleLeadLocs.length > 0) {
-            int i = visibleLeadLocs.length - 1;
-            MapLocation loc = visibleLeadLocs[i];
-            int zx = loc.x / ZONE_SIZE;
-            int zy = loc.y / ZONE_SIZE;
-            if (zoneResourceStatus[zx][zy] != ZONE_MINE_FLAG) {
-                if (myType == ARCHON) {
-                    Zone.updateResourceZoneCount(zoneResourceStatus[zx][zy], ZONE_MINE_FLAG, zx, zy);
-                }
-                zoneResourceStatus[zx][zy] = ZONE_MINE_FLAG;
-                writeReportResource(zx, zy, ZONE_MINE_FLAG);
-            }
-        }
+//        if (totalLead >= 100) {
+//            writeMineHelp(visibleLeadLocs[0]);
+//        } else if (totalLead - numSearched >= 20 && myType != MINER){
+//            boolean shouldWrite = false;
+//            for (int i = sensedAllies.length; --i >= 0;) {
+//                switch (sensedAllies[i].type) {
+//                    case MINER:
+//                    case ARCHON:
+//                        shouldWrite = true;
+//                        break;
+//                }
+//                if (shouldWrite) {
+//                    break;
+//                }
+//            }
+//            if (!shouldWrite) {
+//                writeMineHelp(visibleLeadLocs[0]);
+//            }
+//        }
     }
 
     public static MapLocation getClosestAllyArchon(MapLocation targetLoc) {
@@ -364,6 +383,61 @@ public abstract class Robot extends Constants {
                 if (dist < bestDist) {
                     bestLoc = loc;
                     bestDist = dist;
+                }
+            }
+        }
+        return bestLoc;
+    }
+
+    public static MapLocation[] enemyArchonSymLocs;
+    public static int[] enemyArchonSymStatus;
+
+    public static void initEnemyArchonSymLocs() {
+        enemyArchonSymLocs = new MapLocation[3 * MAX_ARCHONS];
+        enemyArchonSymStatus = new int[3 * MAX_ARCHONS];
+
+        for (int i = MAX_ARCHONS; --i >= 0;) {
+            MapLocation loc = allyArchonLocs[i];
+            if (loc != null) {
+                // horizontal
+                enemyArchonSymLocs[i * 3] = Map.getSymLoc(loc, Symmetry.H);
+                enemyArchonSymLocs[i * 3 + 1] = Map.getSymLoc(loc, Symmetry.V);
+                enemyArchonSymLocs[i * 3 + 2] = Map.getSymLoc(loc, Symmetry.R);
+                log("SYM-LOC " + loc + ": " + enemyArchonSymLocs[i * 3] + " " + enemyArchonSymLocs[i * 3+1] + " " + enemyArchonSymLocs[i * 3+2]);
+            }
+        }
+    }
+
+    public static void updateEnemyArchonSymLocs() throws GameActionException {
+        for (int i = enemyArchonSymLocs.length; --i >= 0;) {
+            MapLocation loc = enemyArchonSymLocs[i];
+            if (loc != null && rc.canSenseLocation(loc)) {
+                RobotInfo ri = rc.senseRobotAtLocation(loc);
+                if (ri != null && ri.type == ARCHON && ri.team == them) {
+                    enemyArchonSymStatus[i] = 1;
+                } else {
+                    enemyArchonSymStatus[i] = -1;
+                }
+            }
+        }
+    }
+
+    public static MapLocation getClosestEnemyArchonSymLoc(MapLocation targetLoc) {
+        if (age < 1) {
+            return null;
+        }
+
+        MapLocation bestLoc = null;
+        int bestDist = P_INF;
+        for (int i = enemyArchonSymLocs.length; --i >= 0; ) {
+            MapLocation loc = enemyArchonSymLocs[i];
+            if (loc != null) {
+                if (enemyArchonSymStatus[i] == 1) {
+                    int dist = targetLoc.distanceSquaredTo(loc);
+                    if (dist < bestDist) {
+                        bestDist = dist;
+                        bestLoc = loc;
+                    }
                 }
             }
         }
@@ -400,7 +474,7 @@ public abstract class Robot extends Constants {
 
         // if skipped turn, updateTurnInfo before skipping
         if (roundNum != endTurn) {
-            log("SKIPPED TURN - BASIC UPDATE]");
+            log("[SKIPPED TURN - BASIC UPDATE]");
             updateTurnInfo();
         }
 
@@ -412,7 +486,7 @@ public abstract class Robot extends Constants {
         if (NO_TURN_LOGS) return;
         logline();
         log(myType + " " + myID);
-        log("Loc: " + here + ". R: " + roundNum);
+        log("Loc: " + here + ". R: " + roundNum + ". A: " + age);
         // tlog extra info at start/end of each turn
         // log("Cooldown: " + (int) (rc.getCooldownTurns() * cooldownRounding) / cooldownRoundingDouble);
         logline();

@@ -1,10 +1,10 @@
 cd ..
 
 ./gradlew run \
--PteamA=comm_explore_bot \
--PteamB=sprint_bot \
--Pmaps=colosseum \
--PprofilerEnabled=false \
+-PteamA=sprint2_bot_nolog \
+-PteamB=explore2_bot_nolog_ref \
+-Pmaps=HighLeadTest \
+-PprofilerEnabled=true \
 2>&1 | tee scripts/logs/log.txt
 
 #./gradlew run \
