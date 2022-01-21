@@ -1,9 +1,9 @@
-package archon_attack_bot;
+package gold_bot;
 
 import battlecode.common.*;
 
-import static archon_attack_bot.Debug.*;
-import static archon_attack_bot.Explore.*;
+import static gold_bot.Debug.*;
+import static gold_bot.Explore.*;
 
 public class Watchtower extends Robot {
     // constants

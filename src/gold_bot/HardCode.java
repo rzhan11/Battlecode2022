@@ -1,6 +1,6 @@
-package archon_attack_bot;
+package gold_bot;
 
-import static archon_attack_bot.Robot.*;
+import static gold_bot.Robot.*;
 
 public class HardCode {
 

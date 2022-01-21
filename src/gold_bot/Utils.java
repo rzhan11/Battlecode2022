@@ -1,11 +1,11 @@
-package archon_attack_bot;
+package gold_bot;
 
 import battlecode.common.*;
 import static battlecode.common.RobotType.*;
 
-import static archon_attack_bot.Debug.*;
-import static archon_attack_bot.Map.*;
-import static archon_attack_bot.Robot.*;
+import static gold_bot.Debug.*;
+import static gold_bot.Map.*;
+import static gold_bot.Robot.*;
 
 public class Utils {
 
@@ -110,6 +110,11 @@ public class Utils {
     public static int randInt(int upper) {
         double x = Math.sin(RANDOM_SEED++) * 10000;
         return (int) (upper * (x - Math.floor(x)));
+    }
+
+    public static int randInt(int lower, int upper) {
+        double x = Math.sin(RANDOM_SEED++) * 10000;
+        return (int) ((upper - lower) * (x - Math.floor(x))) + lower;
     }
 
     public static boolean randBoolean() {

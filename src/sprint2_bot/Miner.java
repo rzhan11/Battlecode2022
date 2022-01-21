@@ -81,7 +81,6 @@ public class Miner extends Robot {
         // avoid danger
         {
             Direction moveDir = avoidDanger();
-            log("avoided danger " + moveDir);
             if (moveDir != null) {
                 return moveDir;
             }
@@ -243,12 +242,12 @@ public class Miner extends Robot {
 //        return moveDir;
     }
 
-    public static void checkResetMineHelpLoc() {
-        int dist = here.distanceSquaredTo(mineHelpLoc);
-        if (dist < 8 || MINE_HELP_RANGE < dist) {
-            mineHelpLoc = null;
-        }
-    }
+//    public static void checkResetMineHelpLoc() {
+//        int dist = here.distanceSquaredTo(mineHelpLoc);
+//        if (dist < 8 || MINE_HELP_RANGE < dist) {
+//            mineHelpLoc = null;
+//        }
+//    }
 
     final public static int AGGRESSIVE_TIME = 5;
     public static int lastAggressiveRound = -(AGGRESSIVE_TIME + 10);
@@ -304,7 +303,6 @@ public class Miner extends Robot {
     }
 
     public static Direction avoidDanger() throws GameActionException {
-        log("danger " + sensedEnemySoldierCount + " " + closestDangerLoc);
         if (sensedEnemySoldierCount == 0) {
             return null; // ignore danger if in conflict zone
         }
@@ -313,7 +311,6 @@ public class Miner extends Robot {
             log("No recent danger");
             return null;
         } else {
-            tlog("avoiding danger");
             rc.setIndicatorString("avoid danger " + closestDangerLoc);
             return Nav.fuzzyAway(closestDangerLoc);
         }

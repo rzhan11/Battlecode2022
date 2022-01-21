@@ -26,7 +26,7 @@ while index < len(lines):
                 id = header[header.index("#") + 1:header.index("@")]
                 roundNum = header[header.index("@") + 1:header.index("]")]
 
-            if "bfs" in lines[index]:
+            if "[BYTE] 'updateSymmetryRubble'" in lines[index]:
                 words = lines[index].split()
                 bytecode = int(words[2])
                 if bytecode > most_bfs_byte:

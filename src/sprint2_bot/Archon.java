@@ -166,6 +166,7 @@ public class Archon extends Robot {
         if (relIndex % rc.getArchonCount() == teamSpawnCount % rc.getArchonCount()) {
             return true;
         }
+
         return false;
     }
 
@@ -185,6 +186,25 @@ public class Archon extends Robot {
             return;
         }
 
+        // build builder if rich
+        if (rc.getTeamLeadAmount(us) > 500) {
+            double numBuilders = Math.max(5, 0.75 * (getUnitCount(LABORATORY) + getUnitCount(WATCHTOWER)));
+            if (getUnitCount(BUILDER) < numBuilders) {
+                nextSpawnType = BUILDER;
+                return;
+            }
+        }
+
+        // build miner if need to target loc
+        updateMineHelpTargetLoc();
+        if (numSoldiers >= numMiners / 3.0 && numMiners <= 40) { // at least a 1 to 3 ratio
+            if (myMineHelpTargetLoc != null) {
+                nextSpawnType = MINER;
+                return;
+            }
+        }
+
+
         // hard coded early game
         if (mySpawnCount < 3) {
             nextSpawnType = MINER;
@@ -192,14 +212,6 @@ public class Archon extends Robot {
         } else if (mySpawnCount == 3) {
             nextSpawnType = SOLDIER;
             return;
-        }
-
-        // build builder if rich
-        if (rc.getTeamLeadAmount(us) > 500) {
-            if (random() < 0.2) {
-                nextSpawnType = BUILDER;
-                return;
-            }
         }
 
         /*
@@ -243,6 +255,35 @@ public class Archon extends Robot {
             s = "[P] " + s;
         }
         rc.setIndicatorString(s);
+    }
+
+    public static MapLocation myMineHelpTargetLoc;
+    public static int myMineHelpTargetIndex;
+
+    public static void updateMineHelpTargetLoc() {
+        myMineHelpTargetLoc = null;
+        myMineHelpTargetIndex = -1;
+        int myTargetDist = P_INF;
+
+        for (int i = mineHelpCacheLen; --i >= 0;) {
+            MapLocation loc = mineHelpCache[i];
+            int dist = here.distanceSquaredTo(loc);
+            if (dist < myTargetDist) {
+                myMineHelpTargetLoc = loc;
+                myMineHelpTargetIndex = i;
+                myTargetDist = dist;
+            }
+        }
+        // done
+    }
+
+    public static void updateMineHelpSpawnSuccess() {
+        mineHelpNumSpawns[myMineHelpTargetIndex]--;
+        if (mineHelpNumSpawns[myMineHelpTargetIndex] == 0) {
+            mineHelpCacheLen--;
+            mineHelpCache[myMineHelpTargetIndex] = mineHelpCache[mineHelpCacheLen];
+            mineHelpNumSpawns[myMineHelpTargetIndex] = mineHelpNumSpawns[mineHelpCacheLen];
+        }
     }
 
     public static MapLocation getBuildDestMiner() throws GameActionException {

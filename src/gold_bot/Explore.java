@@ -1,12 +1,13 @@
-package archon_attack_bot;
+package gold_bot;
 
 import battlecode.common.*;
 
-import static archon_attack_bot.Debug.*;
-import static archon_attack_bot.Map.*;
-import static archon_attack_bot.Robot.*;
-import static archon_attack_bot.Utils.*;
-import static archon_attack_bot.Zone.*;
+import static gold_bot.Debug.*;
+import static gold_bot.Map.*;
+import static gold_bot.Symmetry.*;
+import static gold_bot.Robot.*;
+import static gold_bot.Utils.*;
+import static gold_bot.Zone.*;
 
 public class Explore {
     public static MapLocation exploreLoc;
@@ -338,6 +339,106 @@ public class Explore {
         }
     }
 
+
+    public static double dxSymR;
+    public static double dySymR;
+
+    public static Direction[] exploreOrderDirs = new Direction[]{Direction.NORTHEAST, Direction.SOUTHWEST, Direction.NORTHWEST, Direction.SOUTHEAST, Direction.SOUTH, Direction.NORTH, Direction.WEST, Direction.EAST};
+    public static int exploreOrderDirIndex = 0;
+
+    public static MapLocation initExploreLoc;
+
+    public static MapLocation getInitialExploreLoc() {
+
+        { // initial spawns for symmetry checking
+            MapLocation symLoc = null;
+            switch (Archon.mySpawnCount) {
+                case 0: // rotational
+                    if (symmetryState[2] == SYMMETRY_UNKNOWN_FLAG) {
+                        symLoc = getSymLoc(here, Symmetry.R);
+                    }
+                    break;
+//                case 1: // horizontal
+//                    if (symmetryState[0] == SYMMETRY_UNKNOWN_FLAG) {
+//                        symLoc = getSymLoc(here, Symmetry.H);
+//                    }
+//                    break;
+//                case 2: // vertical
+//                    if (symmetryState[1] == SYMMETRY_UNKNOWN_FLAG) {
+//                        symLoc = getSymLoc(here, Symmetry.V);
+//                    }
+//                    break;
+                // spawn counts
+            }
+            if (symLoc != null && !rc.canSenseLocation(symLoc)) { // if it is far enough
+                dxSymR = symLoc.x - here.x;
+                dySymR = symLoc.y - here.y;
+                MapLocation targetLoc = getFarthestLoc(here, symLoc.x - here.x, symLoc.y - here.y);
+                return targetLoc;
+            }
+        }
+
+
+        Direction targetDir;
+        do {
+            targetDir = exploreOrderDirs[exploreOrderDirIndex];
+            exploreOrderDirIndex = (exploreOrderDirIndex + 1) % exploreOrderDirs.length;
+        } while(!checkGoodExploreDir(targetDir));
+
+        log("explore " + targetDir);
+
+        MapLocation loc = getFarthestLoc(here, targetDir.getDeltaX(), targetDir.getDeltaY());
+        if (Archon.mySpawnCount == 1) {
+            if (!(dxSymR == 0 && dySymR == 0)) {
+                double ux = dxSymR;
+                double uy = dySymR;
+                int vx = targetDir.dx;
+                int vy = targetDir.dy;
+                double num = vx * ux + vy * uy;
+                double den = Math.hypot(vx, vy) * Math.hypot(ux, uy);
+                double cos = num / den;
+                double ang = Math.acos(cos) * 180 / Math.PI;
+                log("ang " + ang);
+                if (ang <= 22.5 - 1) { // less than 1/2 a rotation
+                    return getInitialExploreLoc();
+                }
+            }
+        }
+
+        return loc;
+    }
+
+    final public static int GOOD_EXPLORE_DIST = 4;
+
+    public static boolean checkGoodExploreDir(Direction dir) {
+        switch(dir.getDeltaX()) {
+            case -1:
+                // check left wall
+                if (here.x <= GOOD_EXPLORE_DIST) {
+                    return false;
+                }
+                break;
+            case 1:
+                if (XMAX - here.x <= GOOD_EXPLORE_DIST) {
+                    return false;
+                }
+                break;
+        }
+        switch(dir.getDeltaY()) {
+            case -1:
+                // check left wall
+                if (here.y <= GOOD_EXPLORE_DIST) {
+                    return false;
+                }
+                break;
+            case 1:
+                if (YMAX - here.y <= GOOD_EXPLORE_DIST) {
+                    return false;
+                }
+                break;
+        }
+        return true;
+    }
 
 
 }

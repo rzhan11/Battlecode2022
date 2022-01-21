@@ -265,7 +265,7 @@ public class Comms {
             int msgInfo = rc.readSharedArray(cellIndex); // relative index within a section
             if (msgInfo == 0) { // empty message
                 if (skipEmpty) { // CHANGED
-                    log("[SKIP] " + msgIndex + " " + cellIndex);
+                    log("[SECTION-SKIP] " + msgIndex + " " + cellIndex);
                     break;
                 } else {
                     continue;
@@ -532,7 +532,15 @@ public class Comms {
 
 
     public static void writeMinerSpawnCommand(Direction buildDir) throws GameActionException {
-        MapLocation loc = Explore.getInitialExploreLoc();
+        MapLocation loc;
+        if (Archon.myMineHelpTargetLoc == null) {
+            loc = Explore.getInitialExploreLoc();
+        } else {
+            loc = Archon.myMineHelpTargetLoc;
+            Archon.updateMineHelpSpawnSuccess();
+        }
+        log("spawn " + loc);
+
         int msg = loc2bits(loc);
 
         writeSpawnCommand(buildDir, msg);
@@ -926,25 +934,37 @@ public class Comms {
 
     public static void writeMineHelp(MapLocation loc) throws GameActionException {
         if (roundNum - lastWriteMineHelpRound < MINE_HELP_UPDATE_FREQ) {
-            log("[WRITE-SKIP]");
+            log("[WRITE-SKIP] - too soon");
             return;
         }
 
+        int[] zone = loc2Zone(loc);
+        // add to locSet
+        MapLocation zoneLoc = zone2Loc(zone[0], zone[1]);
+        String locStr = loc2string(zoneLoc);
+        if (mineHelpLocSet.contains(locStr)) {
+            tlog("[WRITE-SKIP] - already seen");
+            return;
+        }
+        mineHelpLocSet += loc2string(zoneLoc);
+
+
         lastWriteMineHelpRound = roundNum;
 
-        int[] zone = loc2Zone(loc);
         int msg = zone2bits(zone[0], zone[1]);
         log("Writing 'Mine Help' " + loc + " " + zone[0] + " " + zone[1]);
 
         writeToEmptyCell(msg, MINE_HELP_SECTION_OFFSET, MINE_HELP_SECTION_SIZE);
     }
 
-    final public static int MINE_HELP_DURATION = 10;
+    final public static int MINE_HELP_CLEAR_SET_FREQ = 25;
     final public static int MINE_HELP_CACHE_SIZE = 10;
-    final public static int MINE_HELP_RANGE = 225;
+    final public static int MINE_HELP_NUM_SPAWNS = 2;
+//    final public static int MINE_HELP_RANGE = 225;
 
-    public static MapLocation[] mineHelpCacheLoc = new MapLocation[MINE_HELP_CACHE_SIZE];
-    public static int mineHelpCacheIndex;
+    public static String mineHelpLocSet = "";
+    public static MapLocation[] mineHelpCache = new MapLocation[MINE_HELP_CACHE_SIZE];
+    public static int[] mineHelpNumSpawns = new int[MINE_HELP_CACHE_SIZE];
     public static int mineHelpCacheLen;
 
     public static void readMineHelp(int msgInfo) {
@@ -952,38 +972,21 @@ public class Comms {
         MapLocation loc = zone2Loc(zone[0], zone[1]);
         log("Reading 'Mine Help' " + loc + " " + zone[0] + " " + zone[1]);
 
-        // check if exists already
-        boolean exists = false;
-        {
-            int index = mineHelpCacheIndex;
-            for (int i = mineHelpCacheLen; --i >= 0;) {
-                if (loc.equals(mineHelpCacheLoc[i])) {
-                    exists = true;
-                    break;
-                }
-
-                index++;
-                if (index == MINE_HELP_CACHE_SIZE) {
-                    index = 0;
-                }
-            }
+        String locStr = loc2string(loc);
+        tlog(locStr);
+        if (mineHelpLocSet.contains(locStr)) {
+            tlog("[READ-SKIP] Already seen");
+            return;
         }
+        tlog("is new");
+        mineHelpLocSet += locStr;
 
-        // add to queue if close enough
-        if (!exists && here.isWithinDistanceSquared(loc, MINE_HELP_RANGE)) {
-            if (mineHelpCacheLen < MINE_HELP_CACHE_SIZE) {
-                // if closer than front, swap with front
-                if (mineHelpCacheLen > 0) {
-                    int oldDist = here.distanceSquaredTo(mineHelpCacheLoc[mineHelpCacheIndex]);
-                    int newDist = here.distanceSquaredTo(loc);
-                    if (Math.sqrt(newDist) < Math.sqrt(oldDist) - 5) { // closer by 5
-                        MapLocation temp = loc;
-                        loc = mineHelpCacheLoc[mineHelpCacheIndex];
-                        mineHelpCacheLoc[mineHelpCacheIndex] = temp;
-                    }
-                }
-
-                mineHelpCacheLoc[(mineHelpCacheIndex + mineHelpCacheLen) % MINE_HELP_CACHE_SIZE] = loc;
+        // add to queue if is best
+        MapLocation bestArchonLoc = getClosestAllyArchon(loc, true);
+        if (here.equals(bestArchonLoc)) {
+            if (mineHelpCacheLen < MINE_HELP_CACHE_SIZE) { // make sure there is space
+                mineHelpCache[mineHelpCacheLen] = loc;
+                mineHelpNumSpawns[mineHelpCacheLen] = MINE_HELP_NUM_SPAWNS;
                 mineHelpCacheLen++;
             }
         }
@@ -991,7 +994,18 @@ public class Comms {
 
     public static void readMineHelpSection() throws GameActionException {
         startBytecode("readMineHelpSection");
-        readMessageSection(MINE_HELP_SECTION_ID, MINE_HELP_SECTION_OFFSET, MINE_HELP_SECTION_SIZE, false);
+        readMessageSection(MINE_HELP_SECTION_ID, MINE_HELP_SECTION_OFFSET, MINE_HELP_SECTION_SIZE, true);
         stopBytecode("readMineHelpSection");
+    }
+
+    public static void updateMineHelpSet() {
+        // update mineHelpRepeatSet
+        if (roundNum % MINE_HELP_CLEAR_SET_FREQ == 0) {
+            mineHelpLocSet = "";
+        }
+    }
+
+    public static String loc2string (MapLocation loc) {
+        return loc.toString();
     }
 }

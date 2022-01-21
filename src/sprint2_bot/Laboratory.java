@@ -25,7 +25,7 @@ public class Laboratory extends Robot {
             return;
         }
 
-        if (rc.getTeamLeadAmount(us) > 1000 && rc.getTeamGoldAmount(us) < 100) {
+        if (rc.getTeamLeadAmount(us) > 1500 && rc.getTeamGoldAmount(us) < 40) {
             Actions.doTransmute();
             return;
         }

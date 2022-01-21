@@ -1,10 +1,10 @@
-package archon_attack_bot;
+package gold_bot;
 
 import battlecode.common.*;
 
-import static archon_attack_bot.Comms.*;
-import static archon_attack_bot.Debug.*;
-import static archon_attack_bot.HardCode.*;
+import static gold_bot.Comms.*;
+import static gold_bot.Debug.*;
+import static gold_bot.HardCode.*;
 
 public class ArchonPortable extends Archon {
 

@@ -1,11 +1,14 @@
-package archon_attack_bot;
+package gold_bot;
 
 import battlecode.common.*;
 
-import static archon_attack_bot.Robot.*;
-import static archon_attack_bot.Debug.*;
+import static gold_bot.Robot.*;
+import static gold_bot.Debug.*;
 
 public class Actions {
+
+    public static int myLastMoveRound = -100;
+    public static Direction myLastMoveDir;
 
     public static boolean isMovePaused;
     public static Direction storedMove;
@@ -28,7 +31,10 @@ public class Actions {
             log("MOVING " + dir);
             drawLine(here, rc.adjacentLocation(dir), YELLOW);
             rc.move(dir);
+            // updates
             updatePositionInfo();
+            myLastMoveRound = roundNum;
+            myLastMoveDir = dir;
         }
     }
 

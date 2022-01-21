@@ -326,6 +326,7 @@ public class Comms {
         Whether HQ 1/2/3/4's symmetric location has been explored, has a enemy hq or not
      */
     public static void writeSymInfo(Symmetry sym) {
+
     }
 
     public static void readSymInfo(int msgInfo, int msgIndex) {

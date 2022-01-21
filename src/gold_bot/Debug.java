@@ -1,8 +1,8 @@
-package archon_attack_bot;
+package gold_bot;
 
 import battlecode.common.*;
 
-import static archon_attack_bot.Robot.*;
+import static gold_bot.Robot.*;
 
 public class Debug {
 
@@ -133,18 +133,22 @@ public class Debug {
     */
     public static void logi() {
         buffer.append("\n");
+        printBuffer();
     }
 
     public static void logi(String str) {
         buffer.append("\n").append(str);
+        printBuffer();
     }
 
     public static void tlogi(String str) {
         buffer.append("\n- ").append(str);
+        printBuffer();
     }
 
     public static void ttlogi(String str) {
         buffer.append("\n-- ").append(str);
+        printBuffer();
     }
 
     public static void drawLine(MapLocation loc1, MapLocation loc2, int[] color) {

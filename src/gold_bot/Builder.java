@@ -1,10 +1,10 @@
-package archon_attack_bot;
+package gold_bot;
 
 import battlecode.common.*;
 
 import static battlecode.common.RobotType.*;
-import static archon_attack_bot.Debug.*;
-import static archon_attack_bot.Utils.*;
+import static gold_bot.Debug.*;
+import static gold_bot.Utils.*;
 
 public class Builder extends Robot {
     // constants
@@ -21,60 +21,56 @@ public class Builder extends Robot {
         // put role-specific updates here
 
 
+
         // try to build random watchtower TESTING
-        if (random() < 0.5 && rc.isActionReady()) {
+        if (random() < 0.5) {
             // mutate towers if rich
             RobotInfo[] adjAllies = rc.senseNearbyRobots(2, us);
-            if (rc.getTeamGoldAmount(us) >= 100) {
-                for (RobotInfo ri: adjAllies) {
-                    if (ri != null && ri.mode == RobotMode.TURRET && ri.type == WATCHTOWER) {
-                        if (ri.level == 2) {
-                            Actions.doMutate(ri.location);
-                            return;
+//            if (rc.getTeamGoldAmount(us) >= 100) {
+//                for (RobotInfo ri: adjAllies) {
+//                    if (ri != null && ri.mode == RobotMode.TURRET && ri.type == WATCHTOWER) {
+//                        if (ri.level == 2) {
+//                            Actions.doMutate(ri.location);
+//                            return;
+//                        }
+//                    }
+//                }
+//            }
+
+
+            // spawn watchtower/lab if possible
+            if (rc.isActionReady()) {
+                if (rc.getTeamLeadAmount(us) > 2000) {
+                    if (getUnitCount(LABORATORY) < 2) {
+                        if (timeSinceEnemy > 25) {
+                            RobotType spawnType = LABORATORY;
+                            Archon.tryBuildBestRubble(spawnType);
                         }
                     }
+    //                Archon.tryBuildBestRubble(spawnType);
+                }
+            }
+
+            // spawn watchtower if rich
+            if (rc.isActionReady()) {
+                if (rc.getTeamLeadAmount(us) > 1000) {
+                    RobotType spawnType = WATCHTOWER;
+                    Archon.tryBuildBestRubble(spawnType);
                 }
             }
 
             // mutate towers if rich
-            if (rc.getTeamLeadAmount(us) >= 2500) {
-                for (RobotInfo ri: adjAllies) {
-                    if (ri != null && ri.mode == RobotMode.TURRET  && ri.type == WATCHTOWER) {
-                        if (ri.level == 1) {
-                            if (rc.getTeamLeadAmount(us) >= 4000 || sensedEnemies.length > 0 && ri.health < ri.type.getMaxHealth(ri.level)) {
-                                // only upgrade if this tower is near frontlines
-                                Actions.doMutate(ri.location);
-                                return;
-                            }
+            if (rc.isActionReady()) {
+                if (rc.getTeamLeadAmount(us) >= 1500) {
+                    for (RobotInfo ri : adjAllies) {
+                        if (ri != null && ri.mode == RobotMode.TURRET && ri.type == WATCHTOWER) {
+                            // only upgrade if this tower is near frontlines
+                            Actions.doMutate(ri.location);
                         }
                     }
                 }
             }
 
-            if (rc.getTeamLeadAmount(us) > 1000) {
-                RobotType spawnType = WATCHTOWER;
-                if (random() < 0.1) {
-                    if (timeSinceEnemy > 50 && roundNum > 500) {
-                        spawnType = LABORATORY;
-                    }
-                }
-
-                Direction randDir = getRandomDir();
-                for (int i = 8; --i >= 0;) {
-                    if (rc.canBuildRobot(spawnType, randDir)) {
-                        MapLocation loc = here.add(randDir);
-                        if ((loc.x + loc.y) % 3 != 0) { // only build on lattice
-                            continue;
-                        }
-                        if (spawnType == WATCHTOWER && loc.x % 8 == 0) {
-                            continue;
-                        }
-                        Actions.doBuildRobot(spawnType, randDir);
-                        return;
-                    }
-                    randDir = randDir.rotateLeft();
-                }
-            }
         }
 
         tryRepair();

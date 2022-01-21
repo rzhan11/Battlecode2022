@@ -1,9 +1,10 @@
 cd ..
 
 ./gradlew run \
--PteamA=archon_attack_bot \
--PteamB=comm_explore_bot_nolog_nolog \
--Pmaps=eckleburg \
+-PteamA=gold_bot \
+-PteamB=sprint2_bot_nolog \
+-Pmaps=uncomfortable \
+-PprofilerEnabled=true \
 2>&1 | tee scripts/logs/log.txt
 
 #./gradlew run \

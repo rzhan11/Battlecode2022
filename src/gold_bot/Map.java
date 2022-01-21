@@ -1,19 +1,13 @@
-package archon_attack_bot;
+package gold_bot;
 
 import battlecode.common.*;
 
-import static archon_attack_bot.Debug.*;
-import static archon_attack_bot.Robot.*;
+import static gold_bot.Debug.*;
+import static gold_bot.Robot.*;
 
 public class Map {
     public static int XMAX;
     public static int YMAX;
-
-    public static boolean notHSymmetry = false;
-    public static boolean notVSymmetry = false;
-    public static boolean notRSymmetry = false;
-
-    public static Symmetry theSymmetry = null;
 
     public static void initMap() {
         XMAX = rc.getMapWidth() - 1;
@@ -53,6 +47,23 @@ public class Map {
         } else { // use ymove
             return new MapLocation((int) wallX, endY);
         }
+    }
+
+    public static MapLocation getOffsetBounds(MapLocation loc, int offset) {
+        int x = loc.x;
+        int y = loc.y;
+        if (x < offset) {
+            x = offset;
+        } else if (x > XMAX - offset) {
+            x = XMAX - offset;
+        }
+
+        if (y < offset) {
+            y = offset;
+        } else if (y > YMAX - offset) {
+            y = YMAX - offset;
+        }
+        return new MapLocation(x, y);
     }
 
     /*
@@ -521,18 +532,6 @@ public class Map {
 
     */
 
-    public static MapLocation getSymLoc(MapLocation loc, Symmetry sym) {
-        switch(sym) {
-            case H:
-                return new MapLocation(XMAX - loc.x, loc.y);
-            case V:
-                return new MapLocation(loc.x, YMAX - loc.y);
-            case R:
-                return new MapLocation(XMAX - loc.x, YMAX - loc.y);
-            default:
-                return null;
-        }
-    }
 
     public static int dir2int(Direction dir) {
         switch (dir) {
@@ -631,10 +630,4 @@ public class Map {
             }
         }
     }
-}
-
-enum Symmetry {
-    H,
-    V,
-    R
 }

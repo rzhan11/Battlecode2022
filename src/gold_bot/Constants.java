@@ -1,4 +1,4 @@
-package archon_attack_bot;
+package gold_bot;
 
 public class Constants {
     /*

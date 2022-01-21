@@ -1,7 +1,7 @@
 cd ..
 
-T1=sprint2_bot_nolog
-T2=explore2_bot_nolog_ref
+T1=gold_bot
+T2=sprint2_bot_nolog
 
 ./gradlew run \
 -PteamA=$T1 \

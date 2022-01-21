@@ -254,8 +254,9 @@ public abstract class Robot extends Constants {
 
         Comms.readAllyArchonSection();
 
-        if (myType == MINER) {
-//            Comms.readMineHelpSection();
+        updateMineHelpSet();
+        if (myType == ARCHON) {
+            Comms.readMineHelpSection();
         }
 
         Comms.readArchonMoveSection();
@@ -419,8 +420,9 @@ public abstract class Robot extends Constants {
             }
         }
 
-//        if (totalLead >= 100) {
-//            writeMineHelp(visibleLeadLocs[0]);
+        if (totalLead >= 1000) {
+            writeMineHelp(visibleLeadLocs[0]);
+        }
 //        } else if (totalLead - numSearched >= 20 && myType != MINER){
 //            boolean shouldWrite = false;
 //            for (int i = sensedAllies.length; --i >= 0;) {

@@ -1,12 +1,12 @@
-package archon_attack_bot;
+package gold_bot;
 
 import battlecode.common.*;
 
-import static archon_attack_bot.Comms.*;
-import static archon_attack_bot.Debug.*;
-import static archon_attack_bot.Explore.*;
-import static archon_attack_bot.Utils.*;
-import static archon_attack_bot.Zone.*;
+import static gold_bot.Comms.*;
+import static gold_bot.Debug.*;
+import static gold_bot.Explore.*;
+import static gold_bot.Utils.*;
+import static gold_bot.Zone.*;
 
 
 public class Miner extends Robot {
@@ -41,7 +41,7 @@ public class Miner extends Robot {
         Direction moveDir = moveLogic();
         Actions.setMovePause(false); // resume moves
         if (moveDir != null) {
-            if (rc.senseRubble(here) < rc.senseRubble(here.add(moveDir))) {
+            if (rc.senseRubble(here) < rc.senseRubble(rc.adjacentLocation(moveDir))) {
                 // cur location is better
                 startBytecode("tryMine1");
                 tryMine();
@@ -81,7 +81,6 @@ public class Miner extends Robot {
         // avoid danger
         {
             Direction moveDir = avoidDanger();
-            log("avoided danger " + moveDir);
             if (moveDir != null) {
                 return moveDir;
             }
@@ -93,12 +92,45 @@ public class Miner extends Robot {
             return moveDir;
         }
 
+        // go to visible gold locs
+        MapLocation[] visibleGoldLocs = rc.senseNearbyLocationsWithGold(myVisionRadius);
+        if (visibleGoldLocs.length > 0) {
+            // go to gold loc
+            startBytecode("mine - checkGold");
+            log("num gold locs " + visibleGoldLocs.length);
+
+            MapLocation bestLoc = null;
+            int bestDist = P_INF;
+            for (int i = visibleGoldLocs.length; --i >= 0;) {
+                MapLocation loc = visibleGoldLocs[i];
+                int dist = here.distanceSquaredTo(loc);
+                if (dist < bestDist) {
+                    // only go to lead tiles in zone
+                    // only mine lead in same zone/old zones
+                    bestLoc = loc;
+                    bestDist = dist;
+                }
+            }
+            stopBytecode("mine - checkGold");
+
+            if (bestLoc != null) {
+                if (bestLoc.equals(here)) {
+                    rc.setIndicatorString("chilling at gold " + bestLoc);
+                    return null;
+                }
+                Direction moveDir = BFS.move(bestLoc);
+                rc.setIndicatorString("going to gold@" + bestLoc);
+                Debug.drawLine(here, bestLoc, RED);
+                return moveDir;
+            }
+        }
+
         // go to visible lead locs
         int minLead = isAggressive ? 1 : 2;
         MapLocation[] visibleLeadLocs = rc.senseNearbyLocationsWithLead(myVisionRadius, minLead);
         if (visibleLeadLocs.length > 0){
             startBytecode("mine - checkLead");
-            log("num lead " + visibleLeadLocs.length);
+            log("num lead locs " + visibleLeadLocs.length);
             if (visibleLeadLocs.length > 16) { // 68 / 2
                 visibleLeadLocs = rc.senseNearbyLocationsWithLead(8);
             }
@@ -129,7 +161,28 @@ public class Miner extends Robot {
             }
         }
 
+        // go to initExploreLoc
+        if (initExploreLoc != null){
+            // check if clear
+            if (here.isWithinDistanceSquared(initExploreLoc, myVisionRadius)) {
+                initExploreLoc = null;
+            }
+
+            if (age > 100) {
+                initExploreLoc = null;
+            }
+
+            if (initExploreLoc != null) {
+                MapLocation targetLoc = Map.getOffsetBounds(initExploreLoc, 3);
+                Direction moveDir = BFS.move(targetLoc);
+                rc.setIndicatorString("going to initLoc " + initExploreLoc);
+                drawLine(here, initExploreLoc, PURPLE);
+                return moveDir;
+            }
+        }
+
         // go towards mineHelpLoc
+        /*
         if (willHelpMine) {
             // reset if close enough
             if (mineHelpLoc != null) {
@@ -157,6 +210,8 @@ public class Miner extends Robot {
                 return moveDir;
             }
         }
+        */
+
 
         // go towards unknown zones
         {
@@ -187,12 +242,12 @@ public class Miner extends Robot {
 //        return moveDir;
     }
 
-    public static void checkResetMineHelpLoc() {
-        int dist = here.distanceSquaredTo(mineHelpLoc);
-        if (dist < 8 || MINE_HELP_RANGE < dist) {
-            mineHelpLoc = null;
-        }
-    }
+//    public static void checkResetMineHelpLoc() {
+//        int dist = here.distanceSquaredTo(mineHelpLoc);
+//        if (dist < 8 || MINE_HELP_RANGE < dist) {
+//            mineHelpLoc = null;
+//        }
+//    }
 
     final public static int AGGRESSIVE_TIME = 5;
     public static int lastAggressiveRound = -(AGGRESSIVE_TIME + 10);
@@ -248,7 +303,6 @@ public class Miner extends Robot {
     }
 
     public static Direction avoidDanger() throws GameActionException {
-        log("danger " + sensedEnemySoldierCount + " " + closestDangerLoc);
         if (sensedEnemySoldierCount == 0) {
             return null; // ignore danger if in conflict zone
         }
@@ -257,7 +311,6 @@ public class Miner extends Robot {
             log("No recent danger");
             return null;
         } else {
-            tlog("avoiding danger");
             rc.setIndicatorString("avoid danger " + closestDangerLoc);
             return Nav.fuzzyAway(closestDangerLoc);
         }

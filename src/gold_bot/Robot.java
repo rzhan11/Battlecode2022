@@ -1,13 +1,14 @@
-package archon_attack_bot;
+package gold_bot;
 
 import battlecode.common.*;
 
 import static battlecode.common.RobotType.*;
 
-import static archon_attack_bot.Comms.*;
-import static archon_attack_bot.Debug.*;
-import static archon_attack_bot.Zone.*;
-import static archon_attack_bot.Utils.*;
+import static gold_bot.Comms.*;
+import static gold_bot.Debug.*;
+import static gold_bot.Symmetry.*;
+import static gold_bot.Zone.*;
+import static gold_bot.Utils.*;
 
 public abstract class Robot extends Constants {
 
@@ -18,6 +19,7 @@ public abstract class Robot extends Constants {
     final public static Direction[] ALL_DIRS = {Direction.NORTH, Direction.NORTHEAST, Direction.EAST, Direction.SOUTHEAST, Direction.SOUTH, Direction.SOUTHWEST, Direction.WEST, Direction.NORTHWEST, Direction.CENTER}; // includes center
     final public static Direction[] CARD_DIRS = {Direction.NORTH, Direction.EAST, Direction.SOUTH, Direction.WEST}; // four cardinal directions
     final public static Direction[] DIAG_DIRS = {Direction.NORTHEAST, Direction.SOUTHEAST, Direction.SOUTHWEST, Direction.NORTHWEST}; // four diagonals
+    final public static Symmetry[] SYMS = {Symmetry.H, Symmetry.V, Symmetry.R}; // 8 directions
 
 
     /*
@@ -157,12 +159,8 @@ public abstract class Robot extends Constants {
         // report unit counts
         Comms.writeAllyUnitCount(myType);
 
-        if (age >= 1) {
-            if (enemyArchonSymLocs == null) {
-                initEnemyArchonSymLocs();
-            }
-            updateEnemyArchonSymLocs();
-        }
+        // update symmetry
+        updateSymmetryInfo();
 
 
         // update last zone
@@ -211,6 +209,8 @@ public abstract class Robot extends Constants {
     public static RobotInfo[] sensedEnemySoldiers;
     public static int sensedEnemySoldierCount;
 
+    public static boolean fighterOptimize;
+
     public static void initNearbyRobots() {
         if (myType == LABORATORY) {
             return;
@@ -244,35 +244,65 @@ public abstract class Robot extends Constants {
                     break;
             }
         }
+
+        fighterOptimize = (myType == SOLDIER || myType == SAGE) && sensedEnemySoldierCount > 0 && age <= 2;
     }
 
     public static void readRelevantComms() throws GameActionException {
-
+        // read location of archons
         Comms.readAllyArchonSection();
 
-        if (myType == MINER) {
-//            Comms.readMineHelpSection();
+        // mine help set
+        resetMineHelpSet();
+        if (myType == ARCHON) {
+            Comms.readMineHelpSection();
         }
 
+        // read status of moving archons
         Comms.readArchonMoveSection();
+
+        // read symmetry information
+        Comms.readSymmetrySection();
 
         // skip these comms for non-archons on their spawn round
         if (myType == ARCHON || age > 0) {
+            // read common explore section (for zones)
             if (roundNum % COMMON_EXPLORE_UPDATE_FREQ == 1 || age == 1) {
                 Comms.readCommonExploreSection(); // no dependencies
             }
+            // read ally counts
             if (roundNum % 2 == 0) { // read on even
                 Comms.readAllyUnitCountSections();
             }
-            // only need to read broadcasts for first few rounds
-            if (age < READ_BROADCAST_RESOURCE_ROUNDS) {
-                Comms.readBroadcastResourceSection();
+            // read resource comms
+            if (!fighterOptimize) { // skip if in combat
+                // only need to read broadcasts for first few rounds
+                if (age < READ_BROADCAST_RESOURCE_ROUNDS) {
+                    Comms.readBroadcastResourceSection();
+                }
+                Comms.readReportResourceSection();
             }
-            Comms.readReportResourceSection();
         }
 
-        boolean addToList = (myType == SOLDIER || myType == ARCHON || myType == WATCHTOWER);
-        Comms.readReportEnemySection(addToList);
+        // read enemy reports
+        if (!fighterOptimize) { // skip if in combat
+            boolean addToList;
+            switch (myType) {
+                case WATCHTOWER:
+                case SAGE:
+                case ARCHON:
+                case SOLDIER:
+                    addToList = true;
+                    break;
+                default:
+                    addToList = false;
+
+            }
+            Comms.readReportEnemySection(addToList);
+        } else {
+            // reset this variable, even in optimized settings
+            reportedEnemyCount = 0;
+        }
     }
 
     public static int getUnitCount(RobotType rt) {
@@ -321,12 +351,17 @@ public abstract class Robot extends Constants {
             // only update on turns where we can't move (right after we did move)
             return;
         }
+
+        // for cheaper units, don't report resources in early age
+        if (myType.bytecodeLimit <= 10000 && age <= 2) {
+            return;
+        }
+
         startBytecode("updateResourceZoneStatus");
-//        ZoneUpdate.updateResourceZoneStatus(here.x, here.y); // report resource zone updates
         Zone.updateResourceZoneStatus(myZoneX, myZoneY); // report resource zone updates
-        stopBytecode("updateResourceZoneStatus");
         updateResourceZoneStatusEdges(); // report resource zone updates for edge zones
         updateResourceZoneStatusSpeculative();
+        stopBytecode("updateResourceZoneStatus");
     }
 
 
@@ -336,7 +371,6 @@ public abstract class Robot extends Constants {
     public static int[][] edgeZoneDeltas = new int[][]{{0, 1}, {1, 0}, {1, 1}};
 
     public static void updateResourceZoneStatusEdges() throws GameActionException {
-
         for (int i = edgeZoneDeltas.length; --i >= 0; ) {
             int[] delta = edgeZoneDeltas[i];
             int zx = myZoneX + delta[0];
@@ -345,39 +379,31 @@ public abstract class Robot extends Constants {
                 updateResourceZoneStatus(zx, zy);
             }
         }
-
     }
 
     /*
     Tries to update resource zone status of all detected lead locations
      */
     public static void updateResourceZoneStatusSpeculative() throws GameActionException {
-        if (myType.bytecodeLimit <= 7500 && age == 0) {
-            return;
-        }
-
         MapLocation[] visibleLeadLocs = rc.senseNearbyLocationsWithLead(myVisionRadius);
 
         // limit number of searched locs if low on bytecode
-        int maxSearchCount = 100;
-//        switch (myType.bytecodeLimit) {
-//            case 5000:
-//                maxSearchCount = 0;
-//                break;
-//            case 7500:
-//                maxSearchCount = 5;
-//                break;
-//            case 10000:
-//                maxSearchCount = 17;
-//                break;
-//            case 20000:
-//                maxSearchCount = 33;
-//                break;
-//            default:
-//                maxSearchCount = 0;
-//                logi("WARNING: 'updateResourceZoneStatusSpeculative' Unexpected bytecode limit " + myType.bytecodeLimit);
-//
-//        }
+        int maxSearchCount;
+        switch (myType.bytecodeLimit) {
+            case 7500:
+                maxSearchCount = 4;
+                break;
+            case 10000:
+                maxSearchCount = 8;
+                break;
+            case 20000:
+                maxSearchCount = 12;
+                break;
+            default:
+                maxSearchCount = 0;
+                logi("WARNING: 'updateResourceZoneStatusSpeculative' Unexpected bytecode limit " + myType.bytecodeLimit);
+
+        }
 
         int numSearched = Math.min(maxSearchCount, visibleLeadLocs.length);
 
@@ -397,8 +423,9 @@ public abstract class Robot extends Constants {
             }
         }
 
-//        if (totalLead >= 100) {
-//            writeMineHelp(visibleLeadLocs[0]);
+        if (totalLead >= 1000) {
+            writeMineHelp(visibleLeadLocs[0]);
+        }
 //        } else if (totalLead - numSearched >= 20 && myType != MINER){
 //            boolean shouldWrite = false;
 //            for (int i = sensedAllies.length; --i >= 0;) {
@@ -448,9 +475,9 @@ public abstract class Robot extends Constants {
             MapLocation loc = allyArchonLocs[i];
             if (loc != null) {
                 // horizontal
-                enemyArchonSymLocs[i * 3] = Map.getSymLoc(loc, Symmetry.H);
-                enemyArchonSymLocs[i * 3 + 1] = Map.getSymLoc(loc, Symmetry.V);
-                enemyArchonSymLocs[i * 3 + 2] = Map.getSymLoc(loc, Symmetry.R);
+                enemyArchonSymLocs[i * 3] = getSymLoc(loc, Symmetry.H);
+                enemyArchonSymLocs[i * 3 + 1] = getSymLoc(loc, Symmetry.V);
+                enemyArchonSymLocs[i * 3 + 2] = getSymLoc(loc, Symmetry.R);
                 log("SYM-LOC " + loc + ": " + enemyArchonSymLocs[i * 3] + " " + enemyArchonSymLocs[i * 3+1] + " " + enemyArchonSymLocs[i * 3+2]);
             }
         }

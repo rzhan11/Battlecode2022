@@ -1,12 +1,12 @@
-package archon_attack_bot;
+package gold_bot;
 
 import battlecode.common.*;
 
 import static battlecode.common.RobotType.*;
 
-import static archon_attack_bot.Debug.*;
-import static archon_attack_bot.Explore.*;
-import static archon_attack_bot.Zone.*;
+import static gold_bot.Debug.*;
+import static gold_bot.Explore.*;
+import static gold_bot.Zone.*;
 
 public class Soldier extends Robot {
     // constants
@@ -19,11 +19,9 @@ public class Soldier extends Robot {
     public static void firstTurnSetup() throws GameActionException {
         // first turn comms
         // Comms.writeXBounds();
-        lastEnemySoldierRound = -(INVESTIGATE_DANGER_ROUNDS + 10);
 
         curEnemyDangers = new RobotInfo[curEnemyDangers_MAX_LEN];
-        curEnemyNeutrals = new RobotInfo[curEnemyNeutrals_MAX_LEN];
-
+//        curEnemyNeutrals = new RobotInfo[curEnemyNeutrals_MAX_LEN];
     }
 
     // code run each turn
@@ -41,11 +39,13 @@ public class Soldier extends Robot {
             }
         }
 
-        if (rc.isActionReady() && curEnemyDangerCount > 0) {
-            Utils.startBytecode("smartAttack");
-            smartAttack();
-            Utils.stopBytecode("smartAttack");
-            return;
+        if (curEnemyDangerCount > 0) {
+            if (rc.isActionReady() || rc.isMovementReady()) {
+                Utils.startBytecode("smartAttack");
+                smartAttack();
+                Utils.stopBytecode("smartAttack");
+                return;
+            }
         }
 
         if (homeLoc != null) {
@@ -77,15 +77,17 @@ public class Soldier extends Robot {
 
         smartAttack_BestOurDPS = N_INF; // reset this variable
         smartAttack_BestOurDPSDir = Direction.CENTER;
-        for (int i = DIRS.length; --i >= 0; ) {
-            Direction dir = ALL_DIRS[i];
+        if (rc.isMovementReady()) { // check moveable directions
+            for (int i = DIRS.length; --i >= 0; ) {
+                Direction dir = ALL_DIRS[i];
 
-            double localBestScore = getSmartAttackScore(dir);
+                double localBestScore = getSmartAttackScore(dir);
 
-            if (localBestScore > bestScore) {
-                bestEnemy = smartAttack_LocalBestEnemy;
-                bestScore = localBestScore;
-                bestMoveDir = dir;
+                if (localBestScore > bestScore) {
+                    bestEnemy = smartAttack_LocalBestEnemy;
+                    bestScore = localBestScore;
+                    bestMoveDir = dir;
+                }
             }
         }
 
@@ -145,7 +147,7 @@ public class Soldier extends Robot {
             return N_INF;
         }
 
-        double myDamage = SOLDIER.damage;
+        double myDamage = myType.damage;
         MapLocation destLoc = rc.adjacentLocation(dir);
 
         smartAttack_LocalBestEnemy = null;
@@ -179,14 +181,17 @@ public class Soldier extends Robot {
         // divide by local time
         double localDelay = (10 + rc.senseRubble(destLoc)) / 10.0;
         bestTheirDPSDecrease /= localDelay;
-        log("local " + dir + " " + myHealth + " " + ourHurt + " " + myDamage + " " + localDelay);
+//        log("local " + dir + " " + myHealth + " " + ourHurt + " " + myDamage + " " + localDelay);
 
         // calculate ourHealth from ourHurt and healing
         ourHurt = Math.min(myHealth, ourHurt); // cap hurt at total health
         double ourHealth = myHealth - ourHurt;
         MapLocation archonLoc = getClosestAllyArchon(here, true);
         if (archonLoc != null && destLoc.isWithinDistanceSquared(archonLoc, ARCHON.actionRadiusSquared)) {
-            ourHealth += 2;
+            double numSplit = Math.max(1, (1 + sensedAllySoldierCount) * 0.5);
+            double healAmt = Math.min(2.0, myType.getMaxHealth(1) - ourHealth);
+            // heals by 2
+            ourHealth += healAmt / numSplit;
         }
 
         // calculate ourDPS from ourHealth
@@ -200,12 +205,20 @@ public class Soldier extends Robot {
         if (dir == Direction.CENTER) {
             ourDPS = smartAttack_BestOurDPS;
         }
-        tlog("ourHurt/DPS " + ourHurt + " " + ourDPS);
-        tlog("theirDPS/delay " + bestTheirDPSDecrease + " " + localDelay);
+//        tlog("ourHurt/DPS " + ourHurt + " " + ourDPS);
+//        tlog("theirDPS/delay " + bestTheirDPSDecrease + " " + localDelay);
 
-        double localBestScore = bestTheirDPSDecrease + ourDPS;
-        tlog("score " + localBestScore);
-        logline();
+        double localBestScore;
+        if (rc.isActionReady()) {
+            localBestScore = bestTheirDPSDecrease + ourDPS;
+//            tlog("can attack");
+        } else {
+            localBestScore = ourDPS;
+            smartAttack_LocalBestEnemy = null;
+//            tlog("cannot attack");
+        }
+//        tlog("score " + localBestScore);
+//        logline();
 
         return localBestScore;
     }
@@ -214,32 +227,52 @@ public class Soldier extends Robot {
     public static int curEnemyDangerCount;
     final public static int curEnemyDangers_MAX_LEN = 20;
     public static RobotInfo[] curEnemyNeutrals;
-    public static int curEnemyNeutralCount;
-    final public static int curEnemyNeutrals_MAX_LEN = 20;
+//    public static int curEnemyNeutralCount;
+//    final public static int curEnemyNeutrals_MAX_LEN = 20;
 
     public static void initEnemyTypeArrays() throws GameActionException {
         curEnemyDangerCount = 0;
-        curEnemyNeutralCount = 0;
+//        curEnemyNeutralCount = 0;
 
         // todo: optimize for dense units
 
-        for (int i = sensedEnemies.length; --i >= 0; ) {
-            RobotInfo ri = sensedEnemies[i];
-            switch (ri.type) {
-//                case SAGE:
-                case SOLDIER:
-                    if (curEnemyDangerCount < curEnemyDangers_MAX_LEN) {
-                        curEnemyDangers[curEnemyDangerCount++] = ri;
-                    }
+        // put soldiers in
+        if (curEnemyDangerCount < curEnemyDangers_MAX_LEN) {
+            for (int i = sensedEnemySoldierCount; --i >= 0;) {
+                curEnemyDangers[curEnemyDangerCount++] = sensedEnemySoldiers[i];
+                if (curEnemyDangerCount >= curEnemyDangers_MAX_LEN) {
                     break;
-                default:
-                    if (curEnemyNeutralCount < curEnemyNeutrals_MAX_LEN) {
-                        curEnemyNeutrals[curEnemyNeutralCount++] = ri;
-                    }
-                    break;
+                }
             }
         }
+        // repeat for sages/watchtowers?
+//        if (curEnemyDangerCount < curEnemyDangers_MAX_LEN) {
+//            for (int i = sensedEnemySoldierCount; --i >= 0;) {
+//                curEnemyDangers[curEnemyDangerCount++] = sensedEnemySoldiers[i];
+//                if (curEnemyDangerCount >= curEnemyDangers_MAX_LEN) {
+//                    break;
+//                }
+//            }
+//        }
+
+//        for (int i = sensedEnemies.length; --i >= 0; ) {
+//            RobotInfo ri = sensedEnemies[i];
+//            switch (ri.type) {
+////                case SAGE:
+//                case SOLDIER:
+//                    if (curEnemyDangerCount < curEnemyDangers_MAX_LEN) {
+//                        curEnemyDangers[curEnemyDangerCount++] = ri;
+//                    }
+//                    break;
+//                default:
+//                    if (curEnemyNeutralCount < curEnemyNeutrals_MAX_LEN) {
+//                        curEnemyNeutrals[curEnemyNeutralCount++] = ri;
+//                    }
+//                    break;
+//            }
+//        }
     }
+
 
     public static Direction moveLogic() throws GameActionException {
         // skip turn, if cooldown is too high
@@ -248,14 +281,6 @@ public class Soldier extends Robot {
         }
 
 
-        MapLocation closestEnemySoldier = getClosestEnemySoldier();
-        // if in range of enemy and attack is on cooldown, move away from enemy soldiers
-        if (!rc.isActionReady() && closestEnemySoldier != null) {
-            Direction moveDir = runAwayFromEnemy();
-            rc.setIndicatorString("flee ");
-            return moveDir;
-        }
-
         updateTargetEnemyLoc();
         log("target " + targetEnemyLoc + " " + targetEnemyLocDanger);
 
@@ -263,18 +288,12 @@ public class Soldier extends Robot {
         // should automatically target the closest one
         if (sensedEnemies.length > 0) {
             Direction moveDir;
-//            Direction moveDir = chaseSoldier();
-//            if (moveDir != null) {
-//                return moveDir;
-//            }
 
             // if not currently in danger, but has dangerous target, go to dangerous target
-//            if (closestEnemySoldier == null) {
 //                if (targetEnemyLocDanger) {
 //                    moveDir = goToTargetEnemy();
 //                    return moveDir;
 //                }
-//            }
 
             // chase current enemy
             moveDir = chaseNeutral();
@@ -287,61 +306,15 @@ public class Soldier extends Robot {
             return moveDir;
         }
 
-        // pack exploring
-//        if (Comms.commonExploreLoc != null) {
-//            MapLocation targetLoc = Comms.commonExploreLoc;
-//            if (here.distanceSquaredTo(targetLoc) < 25) {
-//                drawLine(here, targetLoc, BLACK);
-//                Direction moveDir = Nav.moveBetterTile(targetLoc, 25);
-////                Direction moveDir = Nav.wander(targetLoc, 8, 9, 0);
-//                rc.setIndicatorString("at the pack");
-//                return moveDir;
-//            } else {
-//                drawLine(here, targetLoc, GRAY);
-//                Direction moveDir = BFS.move(targetLoc);
-//                rc.setIndicatorString("goto pack");
-//                return moveDir;
-//            }
-//        }
-
-//        Explore.updateMomentum();
-
-
-        // go towards unknown zones
-//        {
-//            // update target zones
-//            updateTargetZone();
-//
-//            // go to target zone
-//            if (targetZoneLoc != null) {
-//                Direction moveDir = BFS.move(targetZoneLoc);
-//                rc.setIndicatorString("going to target zone " + targetZoneLoc);
-//                drawLine(here, targetZoneLoc, BLUE);
-//                return moveDir;
-//            }
-//        }
-
 
         Direction moveDir = Explore.exploreSimple();
         rc.setIndicatorString("exploring " + Explore.exploreLoc);
         return moveDir;
     }
 
-    public static void updateTargetZone() {
-        // reset if needed
-        if (targetZoneLoc != null) {
-            if (zoneResourceStatus[targetZoneX][targetZoneY] != ZONE_UNKNOWN_FLAG) {
-                targetZoneLoc = null;
-            }
-        }
-
-        findNewUnknownZone();
-    }
-
     final public static int STAY_HOME_LEAD_MAX = 300;
     final public static int HOME_LOC_UPDATE_FREQ = 10;
     public static MapLocation homeLoc;
-    public static int homeIndex;
     public static int homeLocRound = 0;
 
     /*
@@ -381,48 +354,25 @@ public class Soldier extends Robot {
         if (here.isWithinDistanceSquared(homeLoc, ARCHON.actionRadiusSquared)) {
             // stay still
             // if near home and has a lot of people to be healed
-            /*if (sensedAllySoldierCount >= 8 && myHealth <= 20 && sensedEnemySoldierCount == 0) {
+            if (sensedAllySoldierCount >= 8 && myHealth <= 15 && sensedEnemySoldierCount == 0) {
                 Nav.moveSuicideTile(true);
 //                return null;
                 Actions.doDisintegrate();
                 return null;
-            }*/
+            }
             rc.setIndicatorString("at home");
-            Nav.moveBetterTile(homeLoc, ARCHON.actionRadiusSquared);
+            if (sensedEnemySoldierCount == 0) {
+                Direction moveDir = Nav.moveBetterTile(homeLoc, ARCHON.actionRadiusSquared);
+                return moveDir;
+            }
+            // if enemy soldier count > 0, dont move and go to better tile
             return null;
         } else {
             rc.setIndicatorString("going home");
-            Direction moveDir = BFS.move(homeLoc);
-            return moveDir;
-        }
-    }
-
-    public static MapLocation lastEnemySoldierLoc;
-    public static int lastEnemySoldierRound;
-
-    final public static int INVESTIGATE_DANGER_ROUNDS = 10;
-
-    public static MapLocation getClosestEnemySoldier() {
-        RobotInfo bestEnemy = null;
-        int bestDist = P_INF;
-        for (int i = sensedEnemies.length; --i >= 0; ) {
-            RobotInfo ri = sensedEnemies[i];
-            if (ri.type == SOLDIER) {
-                int dist = here.distanceSquaredTo(ri.location);
-                if (dist < bestDist) {
-                    bestDist = dist;
-                    bestEnemy = ri;
-                }
+            if (sensedEnemySoldierCount == 0) {
+                Direction moveDir = BFS.move(homeLoc);
+                return moveDir;
             }
-        }
-
-        if (bestEnemy != null) {
-            // update last soldier info
-            lastEnemySoldierLoc = bestEnemy.location;
-            lastEnemySoldierRound = roundNum;
-
-            return bestEnemy.location;
-        } else {
             return null;
         }
     }
@@ -543,10 +493,10 @@ public class Soldier extends Robot {
             case BUILDER:
                 score += 3e6;
                 break;
-            case ARCHON:
+            case LABORATORY:
                 score += 2e6;
                 break;
-            case LABORATORY:
+            case ARCHON:
                 score += 1e6;
                 break;
         }

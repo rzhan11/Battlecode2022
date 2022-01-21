@@ -1,12 +1,12 @@
-package archon_attack_bot;
+package gold_bot;
 
 import battlecode.common.*;
 import static battlecode.common.RobotType.*;
 
-import static archon_attack_bot.Comms.writeReportResource;
-import static archon_attack_bot.Debug.*;
-import static archon_attack_bot.Map.*;
-import static archon_attack_bot.Robot.*;
+import static gold_bot.Comms.writeReportResource;
+import static gold_bot.Debug.*;
+import static gold_bot.Map.*;
+import static gold_bot.Robot.*;
 
 /*
 Responsible for tracking resources

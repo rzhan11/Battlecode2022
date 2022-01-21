@@ -1,13 +1,14 @@
-package archon_attack_bot;
+package gold_bot;
 
 import battlecode.common.*;
 
 import static battlecode.common.RobotType.*;
 
-import static archon_attack_bot.Comms.*;
-import static archon_attack_bot.Debug.*;
-import static archon_attack_bot.Utils.*;
-import static archon_attack_bot.Zone.*;
+import static gold_bot.Comms.*;
+import static gold_bot.Debug.*;
+import static gold_bot.Symmetry.*;
+import static gold_bot.Utils.*;
+import static gold_bot.Zone.*;
 
 public class Archon extends Robot {
     // constants
@@ -27,7 +28,6 @@ public class Archon extends Robot {
 
     }
 
-    public static RobotType[] potentialSpawns = new RobotType[]{MINER, SOLDIER, BUILDER};
     public static int mySpawnCount = 0;
     public static int myArchonIndex = -1;
 
@@ -35,19 +35,25 @@ public class Archon extends Robot {
 
     public static RobotType nextSpawnType = MINER;
 
+    public static MapLocation bestRepairLoc;
+
 
     // code run each turn
     public static void turn() throws GameActionException {
         myHealing = myType.getHealing(rc.getLevel());
 
-//        if (roundNum == 25) {
-//            rc.resign();
-//        }
+        if (roundNum == 100) {
+            rc.resign();
+        }
 
         // put role-specific updates here
 
         for (int i = 0; i < 4; i++) {
             log("a " + i + ": " + allyArchonLocs[i] + " " + isAllyArchonLive[i] + " " + archonSpawnBit[i]);
+        }
+
+        for (int i = 0; i < 3; i++) {
+            log(SYMS[i].text + ": " + symmetryState[i]);
         }
 
         if (Archon.isPrimaryArchon()) { // broadcast if is primary archon
@@ -78,6 +84,10 @@ public class Archon extends Robot {
             return;
         }
 
+        // update best repair loc
+        updateBestRepairLoc();
+
+        // transform if needed
         boolean transformed = checkTransform();
         if (transformed) {
             Actions.doTransform();
@@ -95,12 +105,42 @@ public class Archon extends Robot {
         log("should " + shouldTrySpawn + " " + rc.getTeamLeadAmount(us) + " " + nextSpawnType);
         if (shouldTrySpawn) {
             if (rc.getTeamLeadAmount(us) >= nextSpawnType.buildCostLead) {
-                MapLocation buildDest = getBuildDest();
+                MapLocation buildDest = null;
+                Direction dir = null;
+                switch(nextSpawnType) {
+                    case MINER:
+                        buildDest = getBuildDestMiner();
+                        dir = tryBuild(nextSpawnType, buildDest);
+                        break;
+                    case SOLDIER:
+                    case SAGE:
+                    case BUILDER:
+                        // get best tile
+                        if (sensedEnemies.length > 0) { // build on best tile if there are enemies
+                            dir = tryBuildBestRubble(nextSpawnType);
+                        } else {
+                            buildDest = getBuildDestSoldier();
+                            dir = tryBuild(nextSpawnType, buildDest);
+                        }
+                        break;
+                }
 
-                Direction dir = tryBuild(nextSpawnType, buildDest);
+
                 if (dir != null) {
                     // send command
-                    Comms.writeSpawnCommand(dir, 17);
+                    switch(nextSpawnType) {
+                        case MINER:
+                            writeMinerSpawnCommand(dir);
+                            break;
+                        case SOLDIER:
+                        case SAGE:
+                        case BUILDER:
+//                            writeSoldierSpawnCommand(dir);
+                            Comms.writeSpawnCommand(dir, 17);
+                            break;
+                        default:
+                            logi("WARNING: 'Archon.spawn' code should never reach here " + nextSpawnType);
+                    }
 
                     // update team variables
                     teamSpawnCount = (teamSpawnCount + 1) % rc.getArchonCount();
@@ -112,28 +152,7 @@ public class Archon extends Robot {
             }
         }
 
-        // do heals if idle
-        RobotInfo[] actionableAllyRobots = rc.senseNearbyRobots(myActionRadius, us);
-        double bestScore = N_INF;
-        RobotInfo bestRobot = null;
-        for (int i = actionableAllyRobots.length; --i >= 0; ) {
-            RobotInfo ri = actionableAllyRobots[i];
-            if (ri.type.isBuilding()) {
-                continue;
-            }
-            if (ri.health < ri.type.getMaxHealth(ri.level)) {
-                double score = getRepairScore(ri);
-                if (score > bestScore) {
-                    bestScore = score;
-                    bestRobot = ri;
-                }
-            }
-        }
-
-        if (bestRobot != null) {
-            Actions.doRepair(bestRobot.location);
-            return;
-        }
+        tryRepair();
     }
 
     public static boolean checkTrySpawn() {
@@ -143,15 +162,30 @@ public class Archon extends Robot {
 
         // get archon index
         int relIndex = 0;
+//        int numSpawners = 0;
+//        for (int i = MAX_ARCHONS; --i >= 0; ) {
+//            // count number of stationary archons
+//            if (isAllyArchonLive[i]) {
+//                if (allyArchonMoveIndex != i) {
+//                    numSpawners++;
+//                }
+//                if (i > myArchonIndex) {
+//                    relIndex++;
+//                }
+//            }
+//        }
         for (int i = MAX_ARCHONS; --i > myArchonIndex; ) {
+            // count number of stationary archons
             if (isAllyArchonLive[i]) {
                 relIndex++;
             }
         }
+        log("ch " + relIndex + " " + teamSpawnCount + " " + rc.getArchonCount());
 
         if (relIndex % rc.getArchonCount() == teamSpawnCount % rc.getArchonCount()) {
             return true;
         }
+
         return false;
     }
 
@@ -160,11 +194,35 @@ public class Archon extends Robot {
         int numSoldiers = getUnitCount(SOLDIER);
         log("Standard: " + numSoldiers + " " + numMiners + " vs " + minerGoal);
 
+        if (rc.getTeamGoldAmount(us) >= SAGE.buildCostGold) {
+            nextSpawnType = SAGE;
+            return;
+        }
+
         // build soldier if in danger
         if (sensedEnemies.length > 0) {
             nextSpawnType = SOLDIER;
             return;
         }
+
+        // build builder if rich
+        if (rc.getTeamLeadAmount(us) > 500) {
+            double numBuilders = Math.max(5, 0.75 * (getUnitCount(LABORATORY) + getUnitCount(WATCHTOWER)));
+            if (getUnitCount(BUILDER) < numBuilders) {
+                nextSpawnType = BUILDER;
+                return;
+            }
+        }
+
+        // build miner if need to target loc
+        updateMineHelpTargetLoc();
+        if (numSoldiers >= numMiners / 3.0 && numMiners <= 40) { // at least a 1 to 3 ratio
+            if (myMineHelpTargetLoc != null) {
+                nextSpawnType = MINER;
+                return;
+            }
+        }
+
 
         // hard coded early game
         if (mySpawnCount < 3) {
@@ -173,14 +231,6 @@ public class Archon extends Robot {
         } else if (mySpawnCount == 3) {
             nextSpawnType = SOLDIER;
             return;
-        }
-
-        // build builder if rich
-        if (rc.getTeamLeadAmount(us) > 500) {
-            if (random() < 0.2) {
-                nextSpawnType = BUILDER;
-                return;
-            }
         }
 
         /*
@@ -226,7 +276,36 @@ public class Archon extends Robot {
         rc.setIndicatorString(s);
     }
 
-    public static MapLocation getBuildDest() throws GameActionException {
+    public static MapLocation myMineHelpTargetLoc;
+    public static int myMineHelpTargetIndex;
+
+    public static void updateMineHelpTargetLoc() {
+        myMineHelpTargetLoc = null;
+        myMineHelpTargetIndex = -1;
+        int myTargetDist = P_INF;
+
+        for (int i = mineHelpCacheLen; --i >= 0;) {
+            MapLocation loc = mineHelpCache[i];
+            int dist = here.distanceSquaredTo(loc);
+            if (dist < myTargetDist) {
+                myMineHelpTargetLoc = loc;
+                myMineHelpTargetIndex = i;
+                myTargetDist = dist;
+            }
+        }
+        // done
+    }
+
+    public static void updateMineHelpSpawnSuccess() {
+        mineHelpNumSpawns[myMineHelpTargetIndex]--;
+        if (mineHelpNumSpawns[myMineHelpTargetIndex] == 0) {
+            mineHelpCacheLen--;
+            mineHelpCache[myMineHelpTargetIndex] = mineHelpCache[mineHelpCacheLen];
+            mineHelpNumSpawns[myMineHelpTargetIndex] = mineHelpNumSpawns[mineHelpCacheLen];
+        }
+    }
+
+    public static MapLocation getBuildDestMiner() throws GameActionException {
         MapLocation[] leadLocs = rc.senseNearbyLocationsWithLead(myVisionRadius, 2);
         if (leadLocs.length > 64) {
             leadLocs = rc.senseNearbyLocationsWithLead(20);
@@ -250,40 +329,63 @@ public class Archon extends Robot {
         }
     }
 
-    public static Direction tryBuild(RobotType rt, MapLocation buildDest) throws GameActionException {
-        if (buildDest == null) { // build on cheapest tile
-            Direction bestDir = null;
-            int bestRubble = P_INF;
-            for (Direction dir : DIRS) {
-                MapLocation loc = here.add(dir);
-                if (!rc.onTheMap(loc)) {
-                    continue;
-                }
-                if (rc.canSenseRobotAtLocation(loc)) { // skip if occupied
-                    continue;
-                }
-                int rubble = rc.senseRubble(loc);
-                if (rubble < bestRubble) {
-                    bestDir = dir;
-                    bestRubble = rubble;
-                }
-            }
-
-            if (bestDir != null) {
-                Actions.doBuildRobot(rt, bestDir);
-                return bestDir;
-            } else {
-                return null;
+    public static MapLocation getBuildDestSoldier() throws GameActionException {
+        // find a target location
+        MapLocation bestLoc = null;
+        int bestDist = P_INF;
+        for (int i = reportedEnemyCount; --i >= 0;) {
+            MapLocation loc = reportedEnemyLocs[i];
+            int dist = here.distanceSquaredTo(loc);
+            if (dist < bestDist) {
+                bestDist = dist;
+                bestLoc = loc;
             }
         }
 
-        log("bfs " + buildDest);
+        if (bestLoc == null || bestLoc.equals(here)) {
+            return null;
+        } else {
+            return bestLoc;
+        }
+    }
+
+    public static Direction tryBuild(RobotType rt, MapLocation buildDest) throws GameActionException {
+        if (buildDest == null) { // build on cheapest tile
+            Direction buildDir = tryBuildBestRubble(rt);
+            return buildDir;
+        }
+
         // build using bfs
         Direction buildDir = BFS20.getBestDir(buildDest);
-        tlog("res " + buildDir);
         if (buildDir != null) {
             Actions.doBuildRobot(rt, buildDir);
             return buildDir;
+        } else {
+            return tryBuildBestRubble(rt);
+        }
+    }
+
+    public static Direction tryBuildBestRubble(RobotType rt) throws GameActionException {
+        Direction bestDir = null;
+        int bestRubble = P_INF;
+        for (Direction dir : DIRS) {
+            MapLocation loc = here.add(dir);
+            if (!rc.onTheMap(loc)) {
+                continue;
+            }
+            if (rc.canSenseRobotAtLocation(loc)) { // skip if occupied
+                continue;
+            }
+            int rubble = rc.senseRubble(loc);
+            if (rubble < bestRubble) {
+                bestDir = dir;
+                bestRubble = rubble;
+            }
+        }
+
+        if (bestDir != null) {
+            Actions.doBuildRobot(rt, bestDir);
+            return bestDir;
         } else {
             return null;
         }
@@ -366,7 +468,7 @@ public class Archon extends Robot {
 
     public static boolean checkTransform() throws GameActionException {
         // don't do this early
-        if (roundNum < 10) {
+        if (roundNum < 25) {
             return false;
         }
 
@@ -385,28 +487,19 @@ public class Archon extends Robot {
             return false;
         }
 
+        // don't move if ppl need healing
+        if (bestRepairLoc != null) {
+            return false;
+        }
+
         if (reportedEnemyCount > 0) {
-            int farthestArchonIndex = -1;
-            int farthestDist = N_INF;
-            // check if i am the farthest from danger
-            for (int ai = MAX_ARCHONS; --ai >= 0;) {
-                if (isAllyArchonLive[ai]) {
-                    MapLocation loc = allyArchonLocs[ai];
-                    int localMinDist = P_INF;
-                    for (int i = reportedEnemyCount; --i >= 0;) {
-                        int dist = loc.distanceSquaredTo(reportedEnemyLocs[i]);
-                        localMinDist = Math.min(dist, localMinDist);
-                    }
-                    if (localMinDist > farthestDist) {
-                        farthestDist = localMinDist;
-                        farthestArchonIndex = ai;
-                    }
-                }
-            }
+            int[] farthestData = getFarthestArchonToDanger();
+            int farthestArchonIndex = farthestData[0];
+            int farthestDist = farthestData[1];
 
             log("far ai " + farthestArchonIndex + " " + farthestDist);
             if (farthestArchonIndex == myArchonIndex) {
-                if (farthestDist >= 100) { //
+                if (Math.sqrt(farthestDist) >= 10) { //
                     return true;
                 }
             }
@@ -415,7 +508,7 @@ public class Archon extends Robot {
         return false;
     }
 
-    public static int getFarthestArchonToDanger() {
+    public static int[] getFarthestArchonToDanger() {
         int farthestArchonIndex = -1;
         int farthestDist = N_INF;
         // check if i am the farthest from danger
@@ -434,7 +527,7 @@ public class Archon extends Robot {
             }
         }
 
-        return farthestArchonIndex;
+        return new int[] {farthestArchonIndex, farthestDist};
     }
 
     public static int getClosestArchonToDanger() {
@@ -457,5 +550,37 @@ public class Archon extends Robot {
         }
 
         return closestArchonIndex;
+    }
+
+    public static void tryRepair() throws GameActionException {
+        if (bestRepairLoc != null) {
+            Actions.doRepair(bestRepairLoc);
+            return;
+        }
+    }
+
+    public static void updateBestRepairLoc() {
+        bestRepairLoc = null;
+
+        // do heals if idle
+        RobotInfo[] actionableAllyRobots = rc.senseNearbyRobots(myActionRadius, us);
+        double bestScore = N_INF;
+        RobotInfo bestRobot = null;
+        for (int i = actionableAllyRobots.length; --i >= 0; ) {
+            RobotInfo ri = actionableAllyRobots[i];
+            if (ri.type.isBuilding()) {
+                continue;
+            }
+            if (ri.health < ri.type.getMaxHealth(ri.level)) {
+                double score = getRepairScore(ri);
+                if (score > bestScore) {
+                    bestScore = score;
+                    bestRobot = ri;
+                }
+            }
+        }
+        if (bestRobot != null) {
+            bestRepairLoc = bestRobot.location;
+        }
     }
 }

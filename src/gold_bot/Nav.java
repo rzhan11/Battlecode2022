@@ -1,14 +1,14 @@
-package archon_attack_bot;
+package gold_bot;
 
 import battlecode.common.*;
 
 
-import static archon_attack_bot.Bug.*;
-import static archon_attack_bot.Constants.*;
-import static archon_attack_bot.Debug.*;
-import static archon_attack_bot.Map.*;
-import static archon_attack_bot.Robot.*;
-import static archon_attack_bot.Utils.*;
+import static gold_bot.Bug.*;
+import static gold_bot.Constants.*;
+import static gold_bot.Debug.*;
+import static gold_bot.Map.*;
+import static gold_bot.Robot.*;
+import static gold_bot.Utils.*;
 
 public class Nav {
 
