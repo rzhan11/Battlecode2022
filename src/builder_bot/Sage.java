@@ -80,9 +80,9 @@ public class Sage extends Robot {
                 if (localBestScore > bestScore) {
                     bestEnemy = smartAttack_LocalBestEnemy;
                     bestScore = localBestScore;
-                    bestMoveDir = dir;
                 }
             }
+            bestMoveDir = getLeastEnemyDirection();
         }
 
         // center direction
@@ -132,6 +132,29 @@ public class Sage extends Robot {
         }
 
         rc.setIndicatorString(text);
+    }
+
+//    DIRS = {Direction.NORTH, Direction.NORTHEAST, Direction.EAST, Direction.SOUTHEAST, Direction.SOUTH, Direction.SOUTHWEST, Direction.WEST, Direction.NORTHWEST}
+    public static Direction getLeastEnemyDirection() {
+        int[] enemyCounts = new int[8];
+        for (int i = DIRS.length; --i >= 0;) {
+            //get center to check from
+            MapLocation centerCheck = here.add(DIRS[i]).add(DIRS[i]);
+            //check 5x5 area around
+            RobotInfo[] robots = rc.senseNearbyRobots(centerCheck, 8, them);
+            enemyCounts[i] = robots.length;
+        }
+
+        int xdiff = 0;
+        int ydiff = 0;
+        for (int i = enemyCounts.length; --i >= 0;) {
+            int count = enemyCounts[i];
+            xdiff += DIF[i][0] * count;
+            ydiff += DIF[i][1] * count;
+        }
+
+        MapLocation centerOfMass = here.translate(xdiff, ydiff);
+        return here.directionTo(centerOfMass).opposite();
     }
 
     public static RobotInfo smartAttack_LocalBestEnemy;
