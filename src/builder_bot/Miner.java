@@ -1,12 +1,11 @@
-package gold_bot;
+package builder_bot;
 
 import battlecode.common.*;
 
-import static gold_bot.Comms.*;
-import static gold_bot.Debug.*;
-import static gold_bot.Explore.*;
-import static gold_bot.Utils.*;
-import static gold_bot.Zone.*;
+import static builder_bot.Debug.*;
+import static builder_bot.Explore.*;
+import static builder_bot.Utils.*;
+import static builder_bot.Zone.*;
 
 
 public class Miner extends Robot {
@@ -261,7 +260,7 @@ public class Miner extends Robot {
             return;
         }
 
-        int minEnemyDist = getMinEnemyArchonDist(here);
+        int minEnemyDist = getUpperBoundEnemyArchonMinDist(here);
         log("[minEnemyDist] " + minEnemyDist);
         if (minEnemyDist >= 0) {
             double allyDist = Math.sqrt(here.distanceSquaredTo(closestAllyLoc));

@@ -1,14 +1,13 @@
-package gold_bot;
+package builder_bot;
 
 import battlecode.common.*;
 
 import static battlecode.common.RobotType.*;
 
-import static gold_bot.Comms.*;
-import static gold_bot.Debug.*;
-import static gold_bot.Symmetry.*;
-import static gold_bot.Utils.*;
-import static gold_bot.Zone.*;
+import static builder_bot.Comms.*;
+import static builder_bot.Debug.*;
+import static builder_bot.Symmetry.*;
+import static builder_bot.Zone.*;
 
 public class Archon extends Robot {
     // constants
@@ -31,7 +30,6 @@ public class Archon extends Robot {
     public static int mySpawnCount = 0;
     public static int myArchonIndex = -1;
 
-    public static boolean madeContact = false;
 
     public static RobotType nextSpawnType = MINER;
 
@@ -60,25 +58,25 @@ public class Archon extends Robot {
             log(rt + ": " + getUnitCount(rt));
         }
 
-        if (Archon.isPrimaryArchon()) { // broadcast if is primary archon
+        if (Archon.isPrimaryArchon()) { // broadcast resources if is primary archon
             Comms.broadcastResources();
-
         }
+
+        updateBuildLab();
 
         readSpawnCountSection();
 
         updateMinerGoal();
-
-        if (reportedEnemyCount > 0) {
-            madeContact = true;
-        }
-        log("contact " + madeContact);
 
         // do portable archon stuff
         if (rc.getMode() == RobotMode.PORTABLE) {
             ArchonPortable.turn();
             return;
         }
+
+        /*
+        END OF ALL UPDATES
+         */
 
         if (!rc.isActionReady()) {
             return;
@@ -107,6 +105,7 @@ public class Archon extends Robot {
             if (rc.getTeamLeadAmount(us) >= nextSpawnType.buildCostLead) {
                 MapLocation buildDest = null;
                 Direction dir = null;
+                boolean isBuildLab = checkShouldBuildLabBuilder();
                 switch(nextSpawnType) {
                     case MINER:
                         buildDest = getBuildDestMiner();
@@ -114,13 +113,21 @@ public class Archon extends Robot {
                         break;
                     case SOLDIER:
                     case SAGE:
-                    case BUILDER:
                         // get best tile
                         if (sensedEnemies.length > 0) { // build on best tile if there are enemies
                             dir = tryBuildBestRubble(nextSpawnType);
                         } else {
                             buildDest = getBuildDestSoldier();
                             dir = tryBuild(nextSpawnType, buildDest);
+                        }
+                        break;
+                    case BUILDER:
+                        if (isBuildLab) {
+                            buildDest = getBuildDestBuilder();
+                            dir = tryBuild(nextSpawnType, buildDest, true);
+                        } else {
+                            buildDest = null;
+                            dir = tryBuildBestRubble(nextSpawnType);
                         }
                         break;
                 }
@@ -134,9 +141,14 @@ public class Archon extends Robot {
                             break;
                         case SOLDIER:
                         case SAGE:
-                        case BUILDER:
 //                            writeSoldierSpawnCommand(dir);
                             Comms.writeSpawnCommand(dir, 17);
+                            break;
+                        case BUILDER:
+                            writeBuilderSpawnCommand(dir, buildDest, isBuildLab);
+                            // update lab stage
+                            Comms.writeBuildLab(LAB_NEEDED_LAB_STAGE, 10);
+                            //
                             break;
                         default:
                             logi("WARNING: 'Archon.spawn' code should never reach here " + nextSpawnType);
@@ -156,8 +168,35 @@ public class Archon extends Robot {
     }
 
     public static boolean checkTrySpawn() {
-        if (checkLabPhase()) {
-            if (getUnitCount(BUILDER) > 0 && getUnitCount(LABORATORY) == 0) {
+        // waiting for a builder + lab
+        if (curLabStage == BUILDER_NEEDED_LAB_STAGE) {
+            if (curLabArchonIndex == myArchonIndex) {
+                // if i'm the main builder, make sure we have almost enough for a lab + builder
+                // aka we have at least the cost of the lab
+                int cost = LABORATORY.buildCostLead;
+                if (rc.getTeamLeadAmount(us) < cost) {
+                    return false;
+                } else {
+                    return true; // immediately return if true
+                }
+            } else {
+                // if i'm not the main builder, only build if:
+                // we still have enough for a lab + builder (after our build)
+                int cost = LABORATORY.buildCostLead + BUILDER.buildCostLead;
+                cost += 75;
+                if (rc.getTeamLeadAmount(us) < cost) {
+                    return false;
+                }
+            }
+        }
+
+        // waiting for a lab
+        if (curLabStage == LAB_NEEDED_LAB_STAGE) {
+            // if we're waiting for a lab, only build if:
+            // we still have enough for a lab (after our build)
+            int cost = LABORATORY.buildCostLead;
+            cost += 75;
+            if (rc.getTeamLeadAmount(us) < cost) {
                 return false;
             }
         }
@@ -168,26 +207,14 @@ public class Archon extends Robot {
 
         // get archon index
         int relIndex = 0;
-//        int numSpawners = 0;
-//        for (int i = MAX_ARCHONS; --i >= 0; ) {
-//            // count number of stationary archons
-//            if (isAllyArchonLive[i]) {
-//                if (allyArchonMoveIndex != i) {
-//                    numSpawners++;
-//                }
-//                if (i > myArchonIndex) {
-//                    relIndex++;
-//                }
-//            }
-//        }
         for (int i = MAX_ARCHONS; --i > myArchonIndex; ) {
             // count number of stationary archons
             if (isAllyArchonLive[i]) {
                 relIndex++;
             }
         }
-        log("ch " + relIndex + " " + teamSpawnCount + " " + rc.getArchonCount());
 
+//        log("index " + relIndex + " " + rc.getArchonCount() + " " + )
         if (relIndex % rc.getArchonCount() == teamSpawnCount % rc.getArchonCount()) {
             return true;
         }
@@ -200,6 +227,13 @@ public class Archon extends Robot {
         int numSoldiers = getUnitCount(SOLDIER);
         log("Standard: " + numSoldiers + " " + numMiners + " vs " + minerGoal);
 
+        // build builder if needed
+        log("lab " + curLabStage + " " + curLabArchonIndex + " " + myArchonIndex);
+        if (checkShouldBuildLabBuilder()) {
+            nextSpawnType = BUILDER;
+            return;
+        }
+
         if (rc.getTeamGoldAmount(us) >= SAGE.buildCostGold) {
             nextSpawnType = SAGE;
             return;
@@ -211,20 +245,9 @@ public class Archon extends Robot {
             return;
         }
 
-        // build builder if rich
-//        if (rc.getTeamLeadAmount(us) > 500) {
-        if (checkLabPhase()) {
-            double numBuilders = Math.max(2, 0.75 * (getUnitCount(LABORATORY) + getUnitCount(WATCHTOWER)));
-            log("b" + getUnitCount(BUILDER));
-            if (getUnitCount(BUILDER) < numBuilders) {
-                nextSpawnType = BUILDER;
-                return;
-            }
-        }
-
         // build miner if need to target loc
         updateMineHelpTargetLoc();
-        if (numSoldiers >= numMiners / 3.0 && numMiners <= 40) { // at least a 1 to 3 ratio
+        if (numSoldiers >= numMiners / 3.0) { // at least a 1 to 3 ratio
             if (myMineHelpTargetLoc != null) {
                 nextSpawnType = MINER;
                 return;
@@ -249,7 +272,7 @@ public class Archon extends Robot {
 
         // mineLocs
         if (numMiners >= minerGoal) {
-            soldierGoal = minerGoal + (numMiners - minerGoal) * 4;
+            soldierGoal = minerGoal + (numMiners - minerGoal) * 2;
         }
 
         if (numSoldiers <= soldierGoal) {
@@ -259,6 +282,10 @@ public class Archon extends Robot {
             nextSpawnType = MINER;
             return;
         }
+    }
+
+    public static boolean checkShouldBuildLabBuilder() {
+        return curLabStage == BUILDER_NEEDED_LAB_STAGE && curLabArchonIndex == myArchonIndex;
     }
 
     public static int minerGoal;
@@ -284,14 +311,59 @@ public class Archon extends Robot {
         rc.setIndicatorString(s);
     }
 
-    public static boolean checkLabPhase() {
-        if (roundNum > 100) {
-            if (unknownCount <= ZONE_TOTAL_NUM / 2) { // if we have explored at least half
-                return true;
+    final public static int BUILD_LAB_DELAY = 50; // wait at least this number of rounds
+
+    public static void updateBuildLab() throws GameActionException {
+        if (!isPrimaryArchon()) {
+            return;
+        }
+
+        // wait at least 50 rounds between lab building attempts
+        if (roundNum - curLabSentRound < BUILD_LAB_DELAY) {
+            return;
+        }
+
+        // only need to set stage if necessary
+        if (curLabStage != NO_LAB_STAGE) {
+            return;
+        }
+
+        if (getUnitCount(LABORATORY) == 0 && roundNum > 50) {
+            if (getUnitCount(BUILDER) == 0) {
+                // find best archon to spawn lab
+                int bestIndex = -1;
+                int bestDist = N_INF; // want to maximize this
+                for (int i = MAX_ARCHONS; --i >= 0;) {
+                    log("i " + i + " " + isAllyArchonLive[i] + " " + allyArchonMoveIndex);
+                    if (isAllyArchonLive[i] && allyArchonMoveIndex != i) {
+                        MapLocation loc = allyArchonLocs[i];
+                        MapLocation enemyLoc = getClosestEnemyArchonSymLoc(loc);
+                        int dist = loc.distanceSquaredTo(enemyLoc);
+                        if (dist > bestDist) {
+                            bestDist = dist;
+                            bestIndex = i;
+                        }
+                    }
+                }
+
+                if (bestIndex != -1) {
+                    Comms.writeBuildLab(BUILDER_NEEDED_LAB_STAGE, bestIndex);
+                } else {
+                    logi("WARNING: 'updateBuildLab' unexpected bestIndex " + bestIndex);
+                }
+                return;
             }
         }
-        return false;
     }
+
+//    public static boolean checkLabPhase() {
+//        if (roundNum > 100) {
+//            if (unknownCount <= ZONE_TOTAL_NUM / 2) { // if we have explored at least half
+//                return true;
+//            }
+//        }
+//        return false;
+//    }
 
     public static MapLocation myMineHelpTargetLoc;
     public static int myMineHelpTargetIndex;
@@ -366,14 +438,59 @@ public class Archon extends Robot {
         }
     }
 
+    public static MapLocation getBuildDestBuilder() throws GameActionException {
+        // inits if hasn't already
+        HardCode.initBFS9();
+
+        int[][] offsets = HardCode.BFS9;
+
+        MapLocation bestLoc = null;
+        int bestRubble = P_INF;
+        int bestDist = P_INF;
+        for (int i = offsets.length; --i >= 0;) {
+            MapLocation loc = here.translate(offsets[i][0], offsets[i][1]);
+            if (rc.onTheMap(loc) && !rc.isLocationOccupied(loc)) {
+                int rubble = rc.senseRubble(loc);
+                if (rubble < bestRubble) {
+                    bestLoc = loc;
+                    bestRubble = rubble;
+                    bestDist = here.distanceSquaredTo(loc);
+                } else if (rubble == bestRubble) {
+                    int dist = here.distanceSquaredTo(loc);
+                    if (dist < bestDist) {
+                        bestLoc = loc;
+                        bestRubble = rubble;
+                        bestDist = dist;
+                    }
+                }
+            }
+        }
+
+        if (bestLoc == null) {
+            return here;
+        }
+
+        return bestLoc;
+    }
+
     public static Direction tryBuild(RobotType rt, MapLocation buildDest) throws GameActionException {
+        return tryBuild(rt, buildDest, false);
+    }
+
+    public static Direction tryBuild(RobotType rt, MapLocation buildDest, boolean useCheap) throws GameActionException {
         if (buildDest == null) { // build on cheapest tile
             Direction buildDir = tryBuildBestRubble(rt);
             return buildDir;
         }
 
         // build using bfs
-        Direction buildDir = BFS20.getBestDir(buildDest);
+        Direction buildDir;
+        if (useCheap) {
+            buildDir = BFS13.getBestDir(buildDest);
+        } else {
+            buildDir = BFS20.getBestDir(buildDest);
+        }
+
         if (buildDir != null) {
             Actions.doBuildRobot(rt, buildDir);
             return buildDir;
@@ -383,6 +500,17 @@ public class Archon extends Robot {
     }
 
     public static Direction tryBuildBestRubble(RobotType rt) throws GameActionException {
+        Direction bestDir = getBuildBestRubbleDir();
+
+        if (bestDir != null) {
+            Actions.doBuildRobot(rt, bestDir);
+            return bestDir;
+        } else {
+            return null;
+        }
+    }
+
+    public static Direction getBuildBestRubbleDir() throws GameActionException {
         Direction bestDir = null;
         int bestRubble = P_INF;
         for (Direction dir : DIRS) {
@@ -400,12 +528,7 @@ public class Archon extends Robot {
             }
         }
 
-        if (bestDir != null) {
-            Actions.doBuildRobot(rt, bestDir);
-            return bestDir;
-        } else {
-            return null;
-        }
+        return bestDir;
     }
 
     public static boolean isPrimaryArchon() {
@@ -506,6 +629,11 @@ public class Archon extends Robot {
 
         // don't move if ppl need healing
         if (bestRepairLoc != null) {
+            return false;
+        }
+
+        // don't move if i am the builder builder
+        if (checkShouldBuildLabBuilder()) {
             return false;
         }
 

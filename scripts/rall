@@ -1,18 +1,18 @@
 cd ..
 
-T1=gold_bot
-T2=sprint2_bot_nolog
+T2=gold_bot_nolog
+T1=gold_bot_nolog_ref
 
 ./gradlew run \
 -PteamA=$T1 \
 -PteamB=$T2 \
--Pmaps=bigLead,colosseum,eckleburg,fortress,intersection,jellyfish,nottestsmall,progress,rivers,sandwich,squer,uncomfortable,underground,valley \
+-Pmaps=chessboard,collaboration,colosseum,dodgeball,eckleburg,equals,fortress,highway,intersection,jellyfish,nottestsmall,nyancat,progress,rivers,sandwich,snowflake,spine,squer,stronghold,tower,uncomfortable,underground,valley \
 -PprofilerEnabled=false \
 2>&1 | tee scripts/logs/log.txt
 
-./gradlew run \
--PteamA=$T2 \
--PteamB=$T1 \
--Pmaps=bigLead,colosseum,eckleburg,fortress,intersection,jellyfish,nottestsmall,progress,rivers,sandwich,squer,uncomfortable,underground,valley \
--PprofilerEnabled=false \
-2>&1 | tee scripts/logs/log.txt
+#./gradlew run \
+#-PteamA=$T2 \
+#-PteamB=$T1 \
+#-Pmaps=chessboard,collaboration,colosseum,dodgeball,eckleburg,equals,fortress,highway,intersection,jellyfish,nottestsmall,nyancat,progress,rivers,sandwich,snowflake,spine,squer,stronghold,tower,uncomfortable,underground,valley \
+#-PprofilerEnabled=false \
+#2>&1 | tee scripts/logs/log.txt

@@ -1,14 +1,14 @@
-package gold_bot;
+package builder_bot;
 
 import battlecode.common.*;
 
 import static battlecode.common.RobotType.*;
 
-import static gold_bot.Comms.*;
-import static gold_bot.Debug.*;
-import static gold_bot.Symmetry.*;
-import static gold_bot.Zone.*;
-import static gold_bot.Utils.*;
+import static builder_bot.Comms.*;
+import static builder_bot.Debug.*;
+import static builder_bot.Symmetry.*;
+import static builder_bot.Zone.*;
+import static builder_bot.Utils.*;
 
 public abstract class Robot extends Constants {
 
@@ -90,6 +90,10 @@ public abstract class Robot extends Constants {
 
         if (myType != ARCHON) {
             Comms.readOrigArchonSection();
+        }
+
+        if (myType == ARCHON) {
+            Comms.writeBuildLab(NO_LAB_STAGE, 10);
         }
 
         // printBuffer at end
@@ -269,6 +273,14 @@ public abstract class Robot extends Constants {
         resetMineHelpSet();
         if (myType == ARCHON) {
             Comms.readMineHelpSection();
+        }
+
+        // lab phase
+        switch(myType) {
+            case ARCHON:
+            case BUILDER:
+                Comms.readBuildLabSection();
+                break;
         }
 
         // read status of moving archons
@@ -486,7 +498,7 @@ public abstract class Robot extends Constants {
         return bestLoc;
     }
 
-    public static int getMinEnemyArchonDist(MapLocation targetLoc) {
+    public static int getUpperBoundEnemyArchonMinDist(MapLocation targetLoc) {
         if (roundNum <= 1) {
             return -1;
         }

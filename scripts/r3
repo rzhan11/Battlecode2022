@@ -3,7 +3,7 @@ cd ..
 ./gradlew run \
 -PteamA=gold_bot \
 -PteamB=sprint2_bot_nolog \
--Pmaps=uncomfortable \
+-Pmaps=colosseum \
 -PprofilerEnabled=true \
 2>&1 | tee scripts/logs/log.txt
 

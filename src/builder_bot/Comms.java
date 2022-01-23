@@ -1,14 +1,14 @@
-package gold_bot;
+package builder_bot;
 
 import battlecode.common.*;
 
 import static battlecode.common.RobotType.*;
 
-import static gold_bot.Debug.*;
-import static gold_bot.Zone.*;
-import static gold_bot.Robot.*;
-import static gold_bot.Symmetry.*;
-import static gold_bot.Utils.*;
+import static builder_bot.Debug.*;
+import static builder_bot.Zone.*;
+import static builder_bot.Robot.*;
+import static builder_bot.Symmetry.*;
+import static builder_bot.Utils.*;
 
 
 public class Comms {
@@ -172,12 +172,12 @@ public class Comms {
     final public static int ARCHON_MOVE_SECTION_OFFSET = ORIG_ARCHON_SECTION_OFFSET + ORIG_ARCHON_SECTION_SIZE;
     final public static int ARCHON_MOVE_SECTION_SIZE = 1;
 
-    final public static int FLAG_SECTION_ID = 5;
-    final public static int FLAG_SECTION_OFFSET = ARCHON_MOVE_SECTION_OFFSET + ARCHON_MOVE_SECTION_SIZE;
-    final public static int FLAG_SECTION_SIZE = 1;
+    final public static int BUILD_LAB_SECTION_ID = 5;
+    final public static int BUILD_LAB_SECTION_OFFSET = ARCHON_MOVE_SECTION_OFFSET + ARCHON_MOVE_SECTION_SIZE;
+    final public static int BUILD_LAB_SECTION_SIZE = 1;
 
     final public static int REPORT_RESOURCE_SECTION_ID = 6;
-    final public static int REPORT_RESOURCE_SECTION_OFFSET = FLAG_SECTION_OFFSET + FLAG_SECTION_SIZE;
+    final public static int REPORT_RESOURCE_SECTION_OFFSET = BUILD_LAB_SECTION_OFFSET + BUILD_LAB_SECTION_SIZE;
     final public static int REPORT_RESOURCE_SECTION_SIZE = 16;
 
     final public static int BROADCAST_RESOURCE_SECTION_ID = 7;
@@ -291,8 +291,8 @@ public class Comms {
                 case ARCHON_MOVE_SECTION_ID:
                     readArchonMove(msgInfo);
                     break;
-                case FLAG_SECTION_ID:
-                    // todo
+                case BUILD_LAB_SECTION_ID:
+                    readBuildLab(msgInfo);
                     break;
                 case REPORT_RESOURCE_SECTION_ID:
                     readReportResource(msgInfo);
@@ -536,7 +536,10 @@ public class Comms {
 //            tlog("[ME] " + command);
             switch(myType) {
                 case MINER:
-                    readMinerSpawnCommand(msgInfo >>> 3);
+                    readMinerSpawnCommand(command);
+                    break;
+                case BUILDER:
+                    readBuilderSpawnCommand(command, loc);
                     break;
             }
         }
@@ -569,6 +572,34 @@ public class Comms {
         Explore.initExploreLoc = loc;
     }
 
+
+    public static void writeBuilderSpawnCommand(Direction buildDir, MapLocation buildDest, boolean isBuildLab) throws GameActionException {
+        tlog("Writing 'Builder Spawn Command' " + buildDest + " L:" + isBuildLab);
+
+        int msg;
+        if (isBuildLab) {
+            msg = 1 + loc2bits(buildDest);
+        } else {
+            msg = 0;
+        }
+
+
+        writeSpawnCommand(buildDir, msg);
+    }
+
+    public static void readBuilderSpawnCommand(int msg, MapLocation archonLoc) throws GameActionException {
+        if (msg == 0) { // not a lab builder
+            tlog("Reading 'Builder Spawn Command' [TOWER BUILDER]");
+            return;
+        }
+        msg -= 1;
+
+        MapLocation loc = bits2loc(msg & LOC_MASK);
+        tlog("Reading 'Builder Spawn Command' " + loc);
+
+        Builder.initBuildLabLoc(loc);
+    }
+
     final public static int ARCHON_MOVE_DELAY = 30;
     public static int allyArchonMoveIndex = -1;
 
@@ -594,6 +625,52 @@ public class Comms {
     public static void readArchonMoveSection() throws GameActionException {
         allyArchonMoveIndex = -1;
         readMessageSection(ARCHON_MOVE_SECTION_ID, ARCHON_MOVE_SECTION_OFFSET, ARCHON_MOVE_SECTION_SIZE, false);
+    }
+
+    final public static int NO_LAB_STAGE = 0;
+    final public static int BUILDER_NEEDED_LAB_STAGE = 1;
+    final public static int LAB_NEEDED_LAB_STAGE = 2;
+
+    public static int curLabStage = NO_LAB_STAGE;
+    public static int curLabArchonIndex = 10;
+    public static int curLabSentRound = -Archon.BUILD_LAB_DELAY;
+
+    final public static int CUR_LAB_SENT_ROUND_INTERVAL = 20;
+
+    /*
+    0-3 | curLabStage
+    4-7 | curLabArchonIndex
+    8-14 | roundNum / 20 [max val = 100, 7 bits]
+     */
+    public static void writeBuildLab(int stage, int archonIndex) throws GameActionException {
+        curLabStage = stage;
+        curLabArchonIndex = archonIndex;
+        curLabSentRound = (roundNum / CUR_LAB_SENT_ROUND_INTERVAL) * CUR_LAB_SENT_ROUND_INTERVAL;
+
+        log("Writing 'Build Lab' " + curLabStage + " " + curLabArchonIndex + " " + curLabSentRound);
+
+        int roundApprox = roundNum / CUR_LAB_SENT_ROUND_INTERVAL;
+        int msg = curLabStage + (curLabArchonIndex << 4) + (roundApprox << 8);
+
+        writeCell(msg, BUILD_LAB_SECTION_OFFSET);
+    }
+
+    public static void readBuildLab(int msgInfo) throws GameActionException {
+        curLabStage = msgInfo & MASK4;
+        curLabArchonIndex = (msgInfo >> 4) & MASK4;
+        curLabSentRound = (msgInfo >>> 8) * CUR_LAB_SENT_ROUND_INTERVAL;
+
+        if (myType == BUILDER && curLabStage == LAB_NEEDED_LAB_STAGE) {
+            if (Builder.buildLabStartRound < 0) { // if it has been a while since we reset
+                Builder.initBuildLabLoc(null);
+            }
+        }
+
+        log("Reading 'Build Lab' " + curLabStage + " " + curLabArchonIndex + " " + curLabSentRound);
+    }
+
+    public static void readBuildLabSection() throws GameActionException {
+        readMessageSection(BUILD_LAB_SECTION_ID, BUILD_LAB_SECTION_OFFSET, BUILD_LAB_SECTION_SIZE, false);
     }
 
 

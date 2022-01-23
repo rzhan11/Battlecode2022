@@ -1,9 +1,9 @@
 cd ..
 
 ./gradlew run \
--PteamA=sprint2_bot_nolog \
--PteamB=gold_bot \
--Pmaps=equals \
+-PteamA=builder_bot \
+-PteamB=sprint2_bot_nolog \
+-Pmaps=colosseum \
 -PprofilerEnabled=true \
 2>&1 | tee scripts/logs/log.txt
 

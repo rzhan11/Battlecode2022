@@ -1,4 +1,4 @@
-package gold_bot;
+package builder_bot;
 
 import battlecode.common.*;
 

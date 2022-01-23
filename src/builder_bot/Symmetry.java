@@ -1,14 +1,14 @@
-package gold_bot;
+package builder_bot;
 
 import battlecode.common.*;
 
 import static battlecode.common.RobotType.*;
 
-import static gold_bot.Comms.*;
-import static gold_bot.Debug.*;
-import static gold_bot.Map.*;
-import static gold_bot.Robot.*;
-import static gold_bot.Utils.*;
+import static builder_bot.Comms.*;
+import static builder_bot.Debug.*;
+import static builder_bot.Map.*;
+import static builder_bot.Robot.*;
+import static builder_bot.Utils.*;
 
 
 public enum Symmetry {
