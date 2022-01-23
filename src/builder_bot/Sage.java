@@ -5,8 +5,6 @@ import battlecode.common.*;
 import static battlecode.common.RobotType.*;
 
 import static builder_bot.Debug.*;
-import static builder_bot.Explore.*;
-import static builder_bot.Zone.*;
 
 public class Sage extends Robot {
     // constants
@@ -71,6 +69,7 @@ public class Sage extends Robot {
 
         smartAttack_BestOurDPS = N_INF; // reset this variable
         smartAttack_BestOurDPSDir = Direction.CENTER;
+        /*
         if (rc.isMovementReady()) { // check moveable directions
             for (int i = DIRS.length; --i >= 0; ) {
                 Direction dir = ALL_DIRS[i];
@@ -80,10 +79,10 @@ public class Sage extends Robot {
                 if (localBestScore > bestScore) {
                     bestEnemy = smartAttack_LocalBestEnemy;
                     bestScore = localBestScore;
+                    bestMoveDir = dir;
                 }
             }
-            bestMoveDir = getLeastEnemyDirection();
-        }
+        }*/
 
         // center direction
         {
@@ -96,6 +95,20 @@ public class Sage extends Robot {
             }
         }
 
+        Direction dodgeDir = getDodgeEnemyDirection();
+        // get direction
+        {
+            if (bestEnemy != null) {
+                Actions.doAttack(bestEnemy.location);
+            }
+            if (dodgeDir != null) {
+                // go away from danger center of Mass
+                Actions.doMove(dodgeDir);
+            }
+        }
+
+
+        /*
         // if there is a target that can be hit
         // move if needed
         String text = "smart: ";
@@ -132,10 +145,25 @@ public class Sage extends Robot {
         }
 
         rc.setIndicatorString(text);
+
+         */
     }
 
 //    DIRS = {Direction.NORTH, Direction.NORTHEAST, Direction.EAST, Direction.SOUTHEAST, Direction.SOUTH, Direction.SOUTHWEST, Direction.WEST, Direction.NORTHWEST}
-    public static Direction getLeastEnemyDirection() {
+    public static Direction getDodgeEnemyDirection() throws GameActionException {
+
+        MapLocation enemyCenterLoc = getEnemyCenterLoc();
+
+        Direction bestDir = Nav.getFuzzyAwaySimpleDir(enemyCenterLoc);
+
+        if (bestDir == Direction.CENTER) {
+            return null;
+        } else {
+            return bestDir;
+        }
+    }
+
+    public static MapLocation getEnemyCenterLoc() {
         int[] enemyCounts = new int[8];
         for (int i = DIRS.length; --i >= 0;) {
             //get center to check from
@@ -145,16 +173,22 @@ public class Sage extends Robot {
             enemyCounts[i] = robots.length;
         }
 
-        int xdiff = 0;
-        int ydiff = 0;
+        double xdiff = 0;
+        double ydiff = 0;
         for (int i = enemyCounts.length; --i >= 0;) {
             int count = enemyCounts[i];
             xdiff += DIF[i][0] * count;
             ydiff += DIF[i][1] * count;
         }
 
-        MapLocation centerOfMass = here.translate(xdiff, ydiff);
-        return here.directionTo(centerOfMass).opposite();
+        double norm = Math.sqrt(xdiff * xdiff + ydiff * ydiff);
+        if (norm > 0) {
+            xdiff *= (10 / norm);
+            ydiff *= (10 / norm);
+        }
+
+        MapLocation enemyCenterLoc = here.translate((int) xdiff, (int) ydiff);
+        return enemyCenterLoc;
     }
 
     public static RobotInfo smartAttack_LocalBestEnemy;

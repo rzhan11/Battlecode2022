@@ -65,21 +65,9 @@ public class Nav {
     Returns false otherwise
     */
     public static boolean checkDirMoveable(Direction dir) throws GameActionException {
-		MapLocation loc = rc.adjacentLocation(dir);
+//		MapLocation loc = rc.adjacentLocation(dir);
         return rc.canMove(dir);
     }
-
-//    public static void drawCheckDirMoveable() throws GameActionException {
-//        for (Direction dir: DIRS) {
-//            if (!isDirMoveable[dir2int(dir)]) {
-//                drawDot(here.add(dir), RED);
-//            } else if (rc.sensePassability(here.add(dir)) < minPassability) {
-//                drawDot(here.add(dir), ORANGE);
-//            } else {
-//                drawDot(here.add(dir), GREEN);
-//            }
-//        }
-//    }
 
     /*
     Tries to move in the target direction
@@ -296,14 +284,14 @@ public class Nav {
         return bestDir;
     }
 
-    public static Direction fuzzyAwaySimple(MapLocation dangerLoc) throws GameActionException {
+    public static Direction getFuzzyAwaySimpleDir(MapLocation dangerLoc) throws GameActionException {
         int curDist = here.distanceSquaredTo(dangerLoc);
 
         Direction bestDir = null;
         double bestRubble = P_INF;
         for (int i = 8; --i >= 0;) { // 7->0
             Direction dir = DIRS[i];
-            if (checkDirMoveable(dir)) {
+            if (rc.canMove(dir)) {
                 MapLocation adjLoc = rc.adjacentLocation(dir);
                 int dist = adjLoc.distanceSquaredTo(dangerLoc);
                 if (dist > curDist) {
@@ -315,6 +303,12 @@ public class Nav {
                 }
             }
         }
+
+        return bestDir;
+    }
+
+    public static Direction fuzzyAwaySimple(MapLocation dangerLoc) throws GameActionException {
+        Direction bestDir = getFuzzyAwaySimpleDir(dangerLoc);
 
         if (bestDir != null) {
             Actions.doMove(bestDir);

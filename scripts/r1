@@ -3,7 +3,7 @@ cd ..
 ./gradlew run \
 -PteamA=builder_bot \
 -PteamB=gold_bot_nolog \
--Pmaps=highway \
+-Pmaps=chessboard \
 -PprofilerEnabled=false \
 2>&1 | tee scripts/logs/log.txt
 
