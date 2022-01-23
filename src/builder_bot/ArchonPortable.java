@@ -11,12 +11,15 @@ public class ArchonPortable extends Archon {
 
     public static boolean shouldTransformTurret;
     public static int shouldTransformTurretRound;
+
     public static MapLocation settleLoc;
     public static int settleLocRubble;
     public static int settleMoves;
 
     final public static int SETTLE_PATIENCE = 10;
 
+//    public static MapLocation conflictLoc;
+//    public static int conflictLocRound = -100;
 
     /*
     Called evertime we start this
@@ -39,29 +42,12 @@ public class ArchonPortable extends Archon {
             Comms.writeSpawnCount(teamSpawnCount);
         }
 
-
-        if (!rc.isMovementReady()) {
-            HardCode.initBFS30();
-            return;
+        if (!shouldTransformTurret) {
+            checkTransform();
         }
 
-        if (!shouldTransformTurret) {
-            boolean transformed = checkTransform();
-            // find best spot
-            MapLocation bestLoc = here;
-            int bestRubble = rc.senseRubble(here);
-            for (int i = BFS30.length; --i >= 0;) {
-                MapLocation loc = here.translate(BFS30[i][0], BFS30[i][1]);
-                if (rc.onTheMap(loc)) {
-                    int rubble = rc.senseRubble(loc);
-                    if (rubble < bestRubble) {
-                        bestLoc = loc;
-                        bestRubble = rubble;
-                    }
-                }
-            }
-            settleLoc = bestLoc;
-            settleLocRubble = bestRubble;
+        if (!rc.isMovementReady()) {
+            return;
         }
 
         if (shouldTransformTurret) {
@@ -78,7 +64,7 @@ public class ArchonPortable extends Archon {
                 }
             } else { // if a lot of time has passed, use greedy
                 // move to best
-                Direction moveDir = Nav.moveBetterTile();
+                Direction moveDir = Nav.moveBetterTile(false);
                 if (moveDir != null) {
                     return;
                 }
@@ -87,32 +73,63 @@ public class ArchonPortable extends Archon {
             }
         }
 
-        MapLocation bestLoc = null;
-        int bestDist = P_INF;
-        for (int i = reportedEnemyCount; --i >= 0;) {
-            MapLocation loc = reportedEnemyLocs[i];
-            int dist = here.distanceSquaredTo(loc);
-            if (dist < bestDist) {
-                bestLoc = loc;
-                bestDist = dist;
-            }
-        }
 
-        log("bestLoc " + bestLoc);
-        if (bestLoc != null) {
-            Direction moveDir = BFS.move(bestLoc);
-            drawLine(here, bestLoc, BLACK);
+        // go to conflict
+
+        // check if reset current conflictLoc
+
+
+        log("conflictLoc " + conflictLoc);
+        if (conflictLoc != null) {
+            Direction moveDir = BFS.move(conflictLoc);
+            drawLine(here, conflictLoc, BLACK);
             return;
+        } else {
+            initiateTransform();
         }
     }
 
     public static boolean checkTransform() throws GameActionException {
+
+        // is close enough to conflict
+        if (conflictLoc != null) {
+            if (Math.sqrt(here.distanceSquaredTo(conflictLoc)) <= 10) {
+                initiateTransform();
+                return true;
+            }
+        }
+
         if (sensedEnemies.length > 0) {
-            shouldTransformTurret = true;
-            shouldTransformTurretRound = roundNum;
+            initiateTransform();
             return true;
         }
+
         return false;
+    }
+
+    public static void initiateTransform() throws GameActionException {
+        shouldTransformTurret = true;
+        shouldTransformTurretRound = roundNum;
+        findParkingSpot();
+    }
+
+    public static void findParkingSpot() throws GameActionException {
+        // find best spot
+        MapLocation bestLoc = here;
+        int bestRubble = rc.senseRubble(here);
+        MapLocation loc = here;
+        for (int i = DIRS34.length; --i >= 0;) {
+            loc = loc.add(DIRS34[i]);
+            if (rc.onTheMap(loc)) {
+                int rubble = rc.senseRubble(loc);
+                if (rubble < bestRubble) {
+                    bestLoc = loc;
+                    bestRubble = rubble;
+                }
+            }
+        }
+        settleLoc = bestLoc;
+        settleLocRubble = bestRubble;
     }
 
 }

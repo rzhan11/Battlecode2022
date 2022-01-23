@@ -3,6 +3,8 @@ package builder_bot;
 import battlecode.common.*;
 
 import static battlecode.common.RobotType.*;
+import static builder_bot.Comms.*;
+import static builder_bot.Debug.log;
 
 public class Laboratory extends Robot {
     // constants
@@ -25,19 +27,47 @@ public class Laboratory extends Robot {
         int cost = rc.getTransmutationRate(rc.getLevel());
         rc.setIndicatorString("c:" + cost);
 
+//        if (roundNum % 150 == 0) {
+//            Actions.doDisintegrate();
+//            return;
+//        }
+
         if (!rc.isActionReady()) {
             return;
         }
 
-        // if number of sages is less than number of soldiers
-        if (getUnitCount(SAGE) < getUnitCount(SOLDIER)) {
-            if (rc.getTeamLeadAmount(us) >= cost){
+        /*
+        boolean transformed = checkTransform();
+        if (transformed) {
+            Actions.doTransform();
+            ArchonPortable.init();
+            return;
+        }*/
+
+        if (rc.getTeamLeadAmount(us) >= cost){
+            if (shouldTransmute()) {
                 Actions.doTransmute();
             }
         }
-//        if (rc.getTeamLeadAmount(us) > 1500 && rc.getTeamGoldAmount(us) < 40) {
-//            return;
-//        }
 
     }
+
+    public static boolean shouldTransmute() {
+        int numMiners = getUnitCount(MINER);
+        int numLabs = getUnitCount(LABORATORY);
+        if (numMiners < numLabs) { // should have 1 miners for every 1 lab
+            return false;
+        }
+        return true;
+    }
+
+    /*
+    public static boolean checkTransform() throws GameActionException {
+        if (rc.getTransmutationRate(rc.getLevel()) > 10) {
+            // move
+        }
+
+        return false;
+    }
+    */
 }

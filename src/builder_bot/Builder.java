@@ -65,7 +65,7 @@ public class Builder extends Robot {
     }
 
     public static void tryBuildLab() throws GameActionException {
-        if (!rc.isActionReady() || rc.getTeamLeadAmount(us) < LABORATORY.buildCostLead) {
+        if (!canBuildLab() && !rc.isMovementReady()) {
             return;
         }
 
@@ -103,14 +103,19 @@ public class Builder extends Robot {
 
         // i am on the lab loc
         Direction moveDir;
-        if (here.equals(buildLabLoc)) {
-            moveDir = Nav.moveBetterTileForce();
-        } else { // move towards build lab loc
-            if (here.isAdjacentTo(buildLabLoc)) {
-                moveDir = Nav.moveBetterTile(buildLabLoc, 2);
-            } else {
-                moveDir = BFS.move(buildLabLoc);
+        if (buildLabLoc != null) {
+            if (here.equals(buildLabLoc)) {
+                moveDir = Nav.moveBetterTileForce();
+            } else { // move towards build lab loc
+                if (here.isAdjacentTo(buildLabLoc)) {
+                    moveDir = Nav.moveBetterTile(buildLabLoc, 2, true);
+                } else {
+                    moveDir = BFS.move(buildLabLoc);
+                }
             }
+        } else {
+            MapLocation archonLoc = getClosestAllyArchon(here, false);
+            moveDir = Nav.wander(archonLoc, 8, 9, 0);
         }
 
         // build if is now at a good location
@@ -120,6 +125,10 @@ public class Builder extends Robot {
                 return;
             }
         }
+    }
+
+    public static boolean canBuildLab() {
+        return rc.isActionReady() && rc.getTeamLeadAmount(us) >= LABORATORY.buildCostLead;
     }
 
     public static void doBuildLab(Direction buildDir) throws GameActionException {
@@ -133,7 +142,9 @@ public class Builder extends Robot {
         if (bestDir != null) {
             int rubble = rc.senseRubble(rc.adjacentLocation(bestDir));
             if (rubble <= maxRubble) {
-                doBuildLab(bestDir);
+                if (canBuildLab()) {
+                    doBuildLab(bestDir);
+                }
                 return bestDir;
             }
         }
@@ -153,18 +164,6 @@ public class Builder extends Robot {
                 return moveDir;
             }
         }
-
-        // move away from ally archons
-//        for (int i = MAX_ARCHONS; --i >= 0;) {
-//            if (!isAllyArchonLive[i]) {
-//                continue;
-//            }
-//            MapLocation loc = allyArchonLocs[i];
-//            if (here.isWithinDistanceSquared(loc, 5)) {
-//                Direction moveDir = Nav.fuzzyAwaySimple(loc);
-//                return moveDir;
-//            }
-//        }
 
         //
         MapLocation bestRepairLoc = null;
@@ -186,8 +185,25 @@ public class Builder extends Robot {
 
         // go to repair loc
         if (bestRepairLoc != null) {
-            Direction moveDir = BFS.move(bestRepairLoc);
-            return moveDir;
+            if (here.isWithinDistanceSquared(bestRepairLoc, myActionRadius)) {
+                // already in range
+                Direction moveDir = Nav.moveBetterTile(bestRepairLoc, myActionRadius, true);
+                return moveDir;
+            } else {
+                // not in range yet
+                Direction moveDir = BFS.move(bestRepairLoc);
+                return moveDir;
+            }
+        }
+
+        // go to nearest archon location
+        MapLocation archonLoc = getClosestAllyArchon(here, false);
+        if (archonLoc != null) {
+            if (here.isWithinDistanceSquared(archonLoc, 16)) {
+                return Nav.moveBetterTile(archonLoc, 16, true);
+            } else {
+                return BFS.move(archonLoc);
+            }
         }
 
         return Nav.wander(spawnLoc, 8, 9, 0);

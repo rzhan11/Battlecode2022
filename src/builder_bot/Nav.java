@@ -187,7 +187,7 @@ public class Nav {
     /*
     Move to better tile (less rubble)
      */
-    public static Direction moveBetterTile() throws GameActionException {
+    public static Direction moveBetterTile(boolean moveEqual) throws GameActionException {
         Direction[] tryDirs = getClosestDirs(getRandomDir());
 
         Direction bestDir = null;
@@ -204,7 +204,8 @@ public class Nav {
             }
         }
 
-        if (bestRubble < rc.senseRubble(here)) {
+        int hereRubble = rc.senseRubble(here);
+        if (bestRubble < hereRubble || (moveEqual && bestRubble == hereRubble)) {
             Actions.doMove(bestDir);
             return bestDir;
         } else {
@@ -215,7 +216,7 @@ public class Nav {
     /*
     Move to better tile (less rubble)
      */
-    public static Direction moveBetterTile(MapLocation center, int radius) throws GameActionException {
+    public static Direction moveBetterTile(MapLocation center, int radius, boolean moveEqual) throws GameActionException {
         Direction[] tryDirs = getClosestDirs(getRandomDir());
 
         Direction bestDir = null;
@@ -234,7 +235,8 @@ public class Nav {
             }
         }
 
-        if (bestRubble <= rc.senseRubble(here)) {
+        int hereRubble = rc.senseRubble(here);
+        if (bestRubble < hereRubble || (moveEqual && bestRubble == hereRubble)) {
             Actions.doMove(bestDir);
             return bestDir;
         } else {

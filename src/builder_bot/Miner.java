@@ -85,7 +85,7 @@ public class Miner extends Robot {
 
         // is next to mining tile, go to better tile position
         if (wouldMineLoc != null) {
-            Direction moveDir = Nav.moveBetterTile(wouldMineLoc, myActionRadius);
+            Direction moveDir = Nav.moveBetterTile(wouldMineLoc, myActionRadius, true);
             return moveDir;
         }
 

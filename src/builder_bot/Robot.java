@@ -522,6 +522,20 @@ public abstract class Robot extends Constants {
         return worstCaseDist;
     }
 
+    public static MapLocation getClosestEnemyReport(MapLocation targetLoc) {
+        MapLocation bestLoc = null;
+        int bestDist = P_INF;
+        for (int i = reportedEnemyCount; --i >= 0;) {
+            MapLocation loc = reportedEnemyLocs[i];
+            int dist = targetLoc.distanceSquaredTo(loc);
+            if (dist < bestDist) {
+                bestLoc = loc;
+                bestDist = dist;
+            }
+        }
+        return bestLoc;
+    }
+
 
     /*
     Run at the end of each turn

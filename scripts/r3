@@ -1,7 +1,7 @@
 cd ..
 
 ./gradlew run \
--PteamA=gold_bot \
+-PteamA=builder_bot \
 -PteamB=sprint2_bot_nolog \
 -Pmaps=colosseum \
 -PprofilerEnabled=true \

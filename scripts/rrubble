@@ -6,7 +6,7 @@ T2=gold_bot_nolog
 ./gradlew run \
 -PteamA=$T1 \
 -PteamB=$T2 \
--Pmaps=chessboard,collaboration,colosseum,dodgeball,eckleburg,equals,fortress,highway,intersection,jellyfish,nottestsmall,nyancat,pandas,pillars,progress,rivers,sandwich,snowflake,spine,squer,stronghold,tower,uncomfortable,underground,valley \
+-Pmaps=chessboard,colosseum,dodgeball,fortress,nyancat,snowflake,valley \
 -PprofilerEnabled=false \
 2>&1 | tee scripts/logs/log.txt
 

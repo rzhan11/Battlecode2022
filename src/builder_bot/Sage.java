@@ -320,7 +320,7 @@ public class Sage extends Robot {
     public static Direction chaseNeutral() throws GameActionException {
         //
         if (attackableEnemies.length > 0) {
-            Direction moveDir = Nav.moveBetterTile(bestAttackLoc, myActionRadius);
+            Direction moveDir = Nav.moveBetterTile(bestAttackLoc, myActionRadius, true);
             rc.setIndicatorString("adjusting in range");
             return moveDir;
         }

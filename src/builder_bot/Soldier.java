@@ -362,7 +362,7 @@ public class Soldier extends Robot {
             }
             rc.setIndicatorString("at home");
             if (sensedEnemySoldierCount == 0) {
-                Direction moveDir = Nav.moveBetterTile(homeLoc, ARCHON.actionRadiusSquared);
+                Direction moveDir = Nav.moveBetterTile(homeLoc, ARCHON.actionRadiusSquared, true);
                 return moveDir;
             }
             // if enemy soldier count > 0, dont move and go to better tile
@@ -403,7 +403,7 @@ public class Soldier extends Robot {
     public static Direction chaseNeutral() throws GameActionException {
         //
         if (attackableEnemies.length > 0) {
-            Direction moveDir = Nav.moveBetterTile(bestAttackLoc, myActionRadius);
+            Direction moveDir = Nav.moveBetterTile(bestAttackLoc, myActionRadius, true);
             rc.setIndicatorString("adjusting in range");
             return moveDir;
         }

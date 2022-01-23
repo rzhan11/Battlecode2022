@@ -2,9 +2,9 @@ cd ..
 
 ./gradlew run \
 -PteamA=builder_bot \
--PteamB=sprint2_bot_nolog \
--Pmaps=colosseum \
--PprofilerEnabled=true \
+-PteamB=gold_bot_nolog \
+-Pmaps=highway \
+-PprofilerEnabled=false \
 2>&1 | tee scripts/logs/log.txt
 
 #./gradlew run \
